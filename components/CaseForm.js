@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Field from './Field.js';
 import { useMe, useToast, Denied, Spinner } from './Ctx.js';
-import { F, STEPS, GENDERS, FORM_TITLES, groupsFor, keysFor } from '../lib/fields.js';
+import { F, STEPS, GENDERS, FORM_TITLES, groupsFor, keysFor, OPD_RE, OPD_ERR } from '../lib/fields.js';
 import { api, useApi, today, bytes } from '../lib/client.js';
 
 const MAX_FILES = 30;
@@ -70,8 +70,8 @@ export default function CaseForm({ formType }) {
 
   // พิมพ์ OPD เดิม → เติมข้อมูลเดิมของคนไข้ให้ (ไม่แตะวันที่เข้ามา/ระยะตรวจ)
   useEffect(() => {
-    const opd = v?.opd?.trim().toUpperCase();
-    if (!opd || opd.length < 3 || opd === filledFor.current) return;
+    const opd = v?.opd;
+    if (!opd || !OPD_RE.test(opd) || opd === filledFor.current) return;
     const t = setTimeout(async () => {
       try {
         const { data } = await api('/api/records/autofill?opd=' + encodeURIComponent(opd));
@@ -109,6 +109,7 @@ export default function CaseForm({ formType }) {
   function validate() {
     const e = {};
     for (const k of keysFor(formType)) { const f = F[k]; if (f.req && !String(v[k] || '').trim()) e[k] = `กรุณากรอก${f.l}`; }
+    if (!e.opd && !OPD_RE.test(v.opd || '')) e.opd = OPD_ERR;
     setErrs(e);
     const bad = steps.findIndex((s) => s[1].some((k) => e[k]));
     if (bad >= 0) { setStep(bad); toast(Object.values(e)[0]); setTimeout(() => document.querySelector('#nf [aria-invalid=true]')?.focus(), 50); return false; }
@@ -180,7 +181,7 @@ export default function CaseForm({ formType }) {
   if (phase === 'done') return (
     <div className="card empty" style={{ padding: 36 }}>
       <div style={{ fontSize: 44 }}>✅</div><h2>บันทึกเคสเรียบร้อยแล้ว</h2>
-      <p className="mu">{v.opd} · {v.name}{files.length ? ` · ${files.length} ไฟล์` : ''}</p>
+      <p className="mu">{v.opd} · {v.fname} {v.lname}{files.length ? ` · ${files.length} ไฟล์` : ''}</p>
       <div className="row" style={{ justifyContent: 'center', marginTop: 12 }}><button className="btn" onClick={reset}>+ เพิ่มเคสใหม่</button><button className="btn s" onClick={() => router.push('/dashboard')}>← กลับหน้าหลัก</button></div>
     </div>
   );

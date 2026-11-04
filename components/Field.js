@@ -7,7 +7,18 @@ export default function Field({ k, value, onChange, options, error, idp = 'f' })
   const list = f.o || (f.og ? options?.[f.og] || [] : null);
   const id = `${idp}-${k}`;
   let input;
-  if (f.t === 'pills') {
+  if (f.t === 'opd') {
+    const digits = String(value || '').replace(/^HN-/, '');
+    input = (
+      <>
+        <div className="opdbox"><span className="opdpre" aria-hidden="true">HN-</span>
+          <input id={id} inputMode="numeric" autoComplete="off" maxLength={11} placeholder="เลข 11 หลัก" value={digits} aria-invalid={!!error} aria-describedby={id + '-h'}
+            onChange={(e) => { const d = e.target.value.replace(/\D/g, '').slice(0, 11); onChange(k, d ? 'HN-' + d : ''); }} />
+        </div>
+        <p id={id + '-h'} className="mu" style={{ margin: '3px 0 0', fontSize: 12 }}>กรอกตัวเลข 11 หลัก ({digits.length}/11) ระบบเก็บเป็น HN-{digits || 'xxxxxxxxxxx'}</p>
+      </>
+    );
+  } else if (f.t === 'pills') {
     input = list.length ? (
       <div className="pills" role="radiogroup" aria-label={f.l}>
         {list.map((z) => (
