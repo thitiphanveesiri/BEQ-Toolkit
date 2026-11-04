@@ -1,0 +1,14 @@
+import { route, audit } from '../../../../lib/api.js';
+import { listRecords, updateRecord, getOptions } from '../../../../lib/db.js';
+import { cleanRecord } from '../../../../lib/records.js';
+import { AppError } from '../../../../lib/errors.js';
+
+// ผู้ดูแลระบบแก้ไขข้อมูลที่กรอกผิดได้ (ทุกการแก้ไขถูกบันทึกใน audit)
+export const PATCH = route({ perm: 'manage' }, async ({ req, user, params, body }) => {
+  const rec = (await listRecords()).find((r) => r.id === params.id);
+  if (!rec) throw new AppError(404, 'ไม่พบข้อมูล');
+  const clean = cleanRecord(rec.formType, body?.data, await getOptions());
+  await updateRecord({ ...rec, ...clean });
+  audit(req, user, 'record_update', rec.id, rec.opd);
+  return { ok: true };
+});

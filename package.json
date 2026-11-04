@@ -1,0 +1,22 @@
+{
+  "name": "beq-group-toolkit",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.12"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "get-token": "node --env-file-if-exists=.env.local scripts/get-token.mjs",
+    "setup": "node --env-file-if-exists=.env.local scripts/setup.mjs"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "next": "^15.5.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}
