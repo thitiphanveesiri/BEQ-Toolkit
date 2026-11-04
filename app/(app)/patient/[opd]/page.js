@@ -8,21 +8,28 @@ import RecordEditor from '../../../../components/RecordEditor.js';
 import { useApi, D } from '../../../../lib/client.js';
 import { F, procLabel } from '../../../../lib/fields.js';
 
-const SHOW = ['opd', 'name', 'gender', 'age', 'date', 'plantDate', 'nat', 'procType', 'hairMethod', 'proc', 'area', 'tool', 'inj', 'ct', 'visitPeriod', 'cell', 'doc', 'ph', 'ck'];
+// ข้อมูลประจำตัวคนไข้ (ด้านบน) และข้อมูลของแต่ละครั้งที่ส่งฟอร์ม (ในแต่ละ dropdown)
+const SHOW = ['opd', 'name', 'gender', 'age', 'date', 'plantDate', 'nat', 'procType', 'area', 'hairMethod', 'tool', 'inj', 'ct', 'visitPeriod', 'cell', 'doc', 'ph', 'ck'];
+const REC_SHOW = ['date', 'plantDate', 'procType', 'area', 'hairMethod', 'tool', 'inj', 'ct', 'visitPeriod', 'cell', 'doc', 'ph', 'ck'];
 const label = (k) => (k === 'proc' ? 'หัตถการ' : F[k].l);
 const val = (k, v) => (F[k]?.t === 'date' ? D(v) : v);
-const Grid = ({ o }) => (
-  <div className="detail-grid">{SHOW.filter((k) => o[k] && o[k] !== '—' && !(k === 'proc' && o.procType)).map((k) => <div key={k}><small>{label(k)}</small><b>{val(k, o[k])}</b></div>)}</div>
+const Grid = ({ o, keys = SHOW }) => (
+  <div className="detail-grid">{keys.filter((k) => o[k] && o[k] !== '—').map((k) => <div key={k}><small>{label(k)}</small><b>{val(k, o[k])}</b></div>)}</div>
 );
+// เรียง: Day 0 ก่อน แล้วตามวันที่ (เก่า → ใหม่) ให้ตรงกับหน้ารูปภาพ
+const order = (a, b) => (a.formType === b.formType ? (a.date || '').localeCompare(b.date || '') : a.formType === 'day0' ? -1 : 1);
 
 export default function Patient() {
   const { perms } = useMe();
   const { opd } = useParams();
   const { data: p, loading, error, reload } = useApi(perms.viewImages ? '/api/patients/' + opd : null);
-  const [tab, setTab] = useState('info'), [edit, setEdit] = useState(null);
+  const [tab, setTab] = useState('info'), [edit, setEdit] = useState(null), [open, setOpen] = useState(null), [sumOpen, setSumOpen] = useState(true);
   if (!perms.viewImages) return <Denied />;
   if (error && !p) return <div className="card empty" style={{ color: 'var(--dn)' }}>{error}</div>;
   if (loading && !p) return <Spinner />;
+  const recs = [...p.records].sort(order);
+  const isOpen = (id) => (open ? open.has(id) : id === recs[recs.length - 1]?.id); // ค่าเริ่มต้น: เปิดเฉพาะครั้งล่าสุด
+  const toggle = (id) => setOpen((cur) => { const n = new Set(cur || [recs[recs.length - 1]?.id]); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const procOf = (r) => (r.procType ? '' : procLabel(r) === '—' ? '' : procLabel(r));
   return (
     <>
@@ -34,19 +41,38 @@ export default function Patient() {
       </div>
       {tab === 'info' ? (
         <div className="card">
-          <Grid o={p.info} />
-          <h2 style={{ marginTop: 18 }}>ประวัติฟอร์มของ OPD นี้ ({p.records.length})</h2>
-          <div className="grid">
-            {p.records.map((r) => (
-              <div className="card" style={{ margin: 0 }} key={r.id}>
-                <div className="row sp"><b>{r.formType === 'day0' ? 'Day 0 ก่อนวาดเส้น' : r.visitPeriod || 'BEQ Hair Center'}</b><span className="tag">{D(r.date)}</span></div>
-                <Grid o={{ ...r, proc: procOf(r) }} />
-                {r.note && <p className="mu">หมายเหตุ: {r.note}</p>}
-                <p className="mu">รูป/วิดีโอ: {p.media.filter((m) => m.recordId === r.id).length} ไฟล์</p>
-                {perms.manage && <button className="btn s sm" onClick={() => setEdit(r)}>แก้ไข</button>}
-              </div>
-            ))}
+          <section className="acc" style={{ marginTop: 0 }}>
+            <button className="acc-h" aria-expanded={sumOpen} onClick={() => setSumOpen(!sumOpen)}><span className="ch">▸</span><span>ข้อมูลล่าสุดของคนไข้</span><span className="sp2" /></button>
+            {sumOpen && <div className="acc-b"><Grid o={{ ...p.info, proc: undefined }} /></div>}
+          </section>
+          <div className="row sp" style={{ marginTop: 18 }}>
+            <h2 style={{ margin: 0 }}>ประวัติฟอร์มของ OPD นี้ ({recs.length})</h2>
+            <span className="row" style={{ gap: 8 }}>
+              <button className="btn s sm" onClick={() => setOpen(new Set(recs.map((r) => r.id)))}>ขยายทั้งหมด</button>
+              <button className="btn s sm" onClick={() => setOpen(new Set())}>ย่อทั้งหมด</button>
+            </span>
           </div>
+          {recs.map((r) => {
+            const o = isOpen(r.id), n = p.media.filter((m) => m.recordId === r.id).length;
+            return (
+              <section className="acc" key={r.id}>
+                <button className="acc-h" aria-expanded={o} aria-controls={'r-' + r.id} onClick={() => toggle(r.id)}>
+                  <span className="ch">▸</span><span>{r.formType === 'day0' ? 'Day 0 ก่อนวาดเส้น' : r.visitPeriod || 'BEQ Hair Center'}</span>
+                  <span className="mu" style={{ fontWeight: 400 }}>{D(r.date)}</span><span className="sp2" /><span className="tag">{n} ไฟล์</span>
+                </button>
+                {o && (
+                  <div className="acc-b" id={'r-' + r.id}>
+                    <Grid o={{ ...r, proc: procOf(r) }} keys={['proc', ...REC_SHOW]} />
+                    {r.note && <p className="mu">หมายเหตุ: {r.note}</p>}
+                    <div className="row" style={{ gap: 8, marginTop: 8 }}>
+                      {n > 0 && <button className="btn s sm" onClick={() => setTab('img')}>ดูรูป ({n})</button>}
+                      {perms.manage && <button className="btn s sm" onClick={() => setEdit(r)}>แก้ไข</button>}
+                    </div>
+                  </div>
+                )}
+              </section>
+            );
+          })}
         </div>
       ) : <div className="card"><MediaViewer records={p.records} media={p.media} /></div>}
       {edit && <RecordEditor record={edit} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); reload(); }} />}

@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { D, bytes } from '../lib/client.js';
 import { groupLabel } from '../lib/fields.js';
 
@@ -37,9 +38,9 @@ function Thumb({ m, i, onOpen }) {
 }
 
 function Lightbox({ items, start, onClose }) {
-  const [i, setI] = useState(start);
-  const m = items[i], closeRef = useRef();
-  const move = (d) => setI((x) => (x + d + items.length) % items.length);
+  const [i, setI] = useState(start), [zoom, setZoom] = useState(false);
+  const m = items[i], closeRef = useRef(), touch = useRef(null);
+  const move = (d) => { setZoom(false); setI((x) => (x + d + items.length) % items.length); };
   useEffect(() => {
     closeRef.current?.focus();
     const prev = document.body.style.overflow; document.body.style.overflow = 'hidden';
@@ -47,17 +48,32 @@ function Lightbox({ items, start, onClose }) {
     window.addEventListener('keydown', k);
     return () => { window.removeEventListener('keydown', k); document.body.style.overflow = prev; };
   }, []); // eslint-disable-line
-  useEffect(() => { const n = items[(i + 1) % items.length]; if (n?.kind === 'image') new Image().src = `/api/media/${n.id}`; }, [i, items]);
-  return (
-    <div className="lightbox" role="dialog" aria-modal="true" aria-label="ดูรูปขยาย" onClick={(e) => e.target === e.currentTarget && onClose()}>
+  useEffect(() => { for (const d of [1, -1]) { const n = items[(i + d + items.length) % items.length]; if (n?.kind === 'image') new Image().src = `/api/media/${n.id}`; } }, [i, items]);
+  // ปัดซ้าย/ขวาเพื่อเลื่อนรูป (ตอนซูมอยู่ การปัดจะเลื่อนดูภาพแทน)
+  const ts = (e) => { const t = e.touches[0]; touch.current = { x: t.clientX, y: t.clientY }; };
+  const te = (e) => {
+    const s0 = touch.current; touch.current = null; if (!s0 || zoom || items.length < 2) return;
+    const t = e.changedTouches[0], dx = t.clientX - s0.x, dy = t.clientY - s0.y;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) move(dx < 0 ? 1 : -1);
+  };
+  return createPortal(
+    <div className="lightbox" role="dialog" aria-modal="true" aria-label="ดูรูปขยาย" onClick={(e) => e.target === e.currentTarget && onClose()} onTouchStart={ts} onTouchEnd={te}>
       <button ref={closeRef} className="zoom-close" onClick={onClose} aria-label="ปิด">×</button>
       {items.length > 1 && <button className="lb-nav l" onClick={() => move(-1)} aria-label="ก่อนหน้า">‹</button>}
       <div className="lightbox-panel">
-        {m.kind === 'video' ? <video key={m.id} src={`/api/media/${m.id}`} controls autoPlay playsInline preload="metadata" /> : <img key={m.id} src={`/api/media/${m.id}`} alt={m.name} />}
+        {m.kind === 'video' ? <video key={m.id} src={`/api/media/${m.id}`} controls autoPlay playsInline preload="metadata" />
+          : <div className={'lightbox-scroll' + (zoom ? ' zoomed' : '')}><img key={m.id} src={`/api/media/${m.id}`} alt={m.name} draggable={false} onClick={() => setZoom((z) => !z)} /></div>}
         <div className="lightbox-caption">{i + 1}/{items.length} · {m.name} · {bytes(m.size)}{m.drive && <> · <a href={m.drive} target="_blank" rel="noopener noreferrer" style={{ color: '#9be7c8' }}>เปิดใน Drive</a></>}</div>
+        <div className="lb-hint">{m.kind === 'image' ? (zoom ? 'แตะที่รูปเพื่อย่อกลับ · เลื่อนดูส่วนต่างๆ ของรูปได้' : 'แตะที่รูปเพื่อซูม') : ''}{items.length > 1 && ' · ปัดซ้าย/ขวาเพื่อเลื่อนรูป'}</div>
+        {items.length > 1 && (
+          <div className="lb-strip" role="tablist" aria-label="รูปทั้งหมดในกลุ่ม">
+            {items.map((x, j) => <button key={x.id} type="button" aria-current={j === i} aria-label={`รูปที่ ${j + 1}`} onClick={() => { setZoom(false); setI(j); }}>{x.kind === 'image' ? <img src={`/api/media/${x.id}?thumb=1`} alt="" loading="lazy" /> : <span style={{ color: '#fff' }}>▶</span>}</button>)}
+          </div>
+        )}
       </div>
       {items.length > 1 && <button className="lb-nav r" onClick={() => move(1)} aria-label="ถัดไป">›</button>}
-    </div>
+    </div>,
+    document.body // วาดที่ระดับ body เพื่อให้เต็มจอเสมอ ไม่ถูกจำกัดโดยการ์ดที่ครอบอยู่
   );
 }
 
