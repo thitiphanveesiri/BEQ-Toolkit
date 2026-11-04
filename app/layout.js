@@ -1,12 +1,20 @@
-import { redirect } from 'next/navigation';
-import { currentUser } from '../../lib/auth.js';
-import { dataMode } from '../../lib/db.js';
-import { permsOf } from '../../lib/roles.js';
-import Shell from '../../components/Shell.js';
+import './globals.css';
 
-export const dynamic = 'force-dynamic';
-export default async function AppLayout({ children }) {
-  const user = await currentUser();
-  if (!user) redirect('/login');
-  return <Shell user={user} perms={permsOf(user.role)} mock={dataMode() === 'mock'}>{children}</Shell>;
+export const metadata = { title: 'BEQ Group Toolkit | BEQ Hair Center', description: 'ระบบจัดการภาพคนไข้และติดตามผล', robots: { index: false, follow: false } };
+export const viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover' };
+
+const themeInit = "try{var t=localStorage.getItem('beq-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}";
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="th">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
+      </head>
+      <body>{children}</body>
+    </html>
+  );
 }

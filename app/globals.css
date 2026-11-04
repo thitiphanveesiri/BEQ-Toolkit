@@ -176,3 +176,5 @@ table .num{text-align:right}
 .hr span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(min-width:901px){.hr{grid-template-columns:150px 1fr 34px}}
 @media(max-width:600px){.cmp{grid-template-columns:1fr}.thumb img,.thumb .ph{height:96px}}
+.opdbox{display:flex;align-items:stretch}.opdpre{display:grid;place-items:center;padding:0 12px;border:1px solid var(--bd);border-right:0;border-radius:10px 0 0 10px;background:var(--mt);font-weight:600;color:var(--mu)}
+.opdbox input{border-radius:0 10px 10px 0;letter-spacing:.06em}
