@@ -21,4 +21,4 @@ try {
     console.log(`สร้างผู้ดูแลระบบ "${ADMIN_USERNAME}" แล้ว — เข้าสู่ระบบแล้วเปลี่ยนรหัสผ่านได้ และลบ ADMIN_PASSWORD ออกจาก .env.local`);
   }
   console.log('เสร็จเรียบร้อย');
-} catch (e) { console.error('ผิดพลาด:', e.message); process.exit(1); }
+} catch (e) { if (e.message !== 'stop') console.error('ผิดพลาด:', e.message); process.exitCode = 1; }
