@@ -77,7 +77,7 @@ export default function CaseForm({ formType }) {
         const { data } = await api('/api/records/autofill?opd=' + encodeURIComponent(opd));
         filledFor.current = opd;
         // เติมเฉพาะช่องที่มีในฟอร์มนี้ และชื่อทีมงานที่ยังอยู่ในรายการของฟอร์มนี้
-        const ok = ([k, val]) => keysFor(formType).includes(k) &&  (!/^t[A-Z]/.test(F[k].og || '')) || opt?.[F[k].og]?.includes(val));
+        const ok = ([k, val]) => keysFor(formType).includes(k) &&  (!/^t[A-Z]/.test(F[k].og || '') || opt?.[F[k].og]?.includes(val));
         if (data) { setV((p) => ({ ...p, ...Object.fromEntries(Object.entries(data).filter(ok)) })); toast('เติมข้อมูลเดิมของ OPD นี้ให้แล้ว'); }
       } catch {}
     }, 450);
