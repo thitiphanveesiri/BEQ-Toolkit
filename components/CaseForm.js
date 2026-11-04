@@ -199,8 +199,6 @@ export default function CaseForm({ formType }) {
         <b>{g[1]} · {items.length}/{MAX_FILES} ไฟล์</b>
         {phase === 'edit' && (
           <div className="row" style={{ margin: '8px 0' }}>
-            <label className="btn s">📷 ถ่ายรูป<input type="file" accept="image/*" capture="environment" hidden onChange={(e) => { addFiles(g[0], e.target.files); e.target.value = ''; }} /></label>
-            <label className="btn s">🎥 ถ่ายวิดีโอ<input type="file" accept="video/*" capture="environment" hidden onChange={(e) => { addFiles(g[0], e.target.files); e.target.value = ''; }} /></label>
             <label className="btn s">🖼️ เลือกไฟล์<input type="file" accept="image/*,video/*" multiple hidden onChange={(e) => { addFiles(g[0], e.target.files); e.target.value = ''; }} /></label>
           </div>
         )}

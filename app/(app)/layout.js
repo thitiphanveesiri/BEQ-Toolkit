@@ -8,5 +8,5 @@ export const dynamic = 'force-dynamic';
 export default async function AppLayout({ children }) {
   const user = await currentUser();
   if (!user) redirect('/login');
-  return <Shell user={user} perms={permsOf(user.role)} mock={dataMode() === 'mock'}>{children}</Shell>;
+  return <Shell user={user} perms={permsOf(user)} mock={dataMode() === 'mock'}>{children}</Shell>;
 }

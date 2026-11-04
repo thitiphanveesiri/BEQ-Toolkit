@@ -57,7 +57,7 @@ export default function Field({ k, value, onChange, options, error, idp = 'f' })
   } else {
     input = (
       <>
-        <input id={id} type={f.t === 'date' ? 'date' : 'text'} value={value} onChange={(e) => onChange(k, e.target.value)} placeholder={f.ph} list={f.sug ? id + '-l' : undefined}
+        <input id={id} type={f.t === 'date' ? 'date' : 'text'} value={value} onChange={(e) => onChange(k, f.num ? e.target.value.replace(/\D/g, '').slice(0, 3) : e.target.value)} inputMode={f.num ? 'numeric' : undefined} placeholder={f.ph} list={f.sug ? id + '-l' : undefined}
           aria-invalid={!!error} autoComplete="off" autoCapitalize={k === 'opd' ? 'characters' : undefined} maxLength={120} />
         {f.sug && <datalist id={id + '-l'}>{f.sug.map((z) => <option key={z} value={z} />)}</datalist>}
       </>

@@ -8,7 +8,7 @@ import RecordEditor from '../../../../components/RecordEditor.js';
 import { useApi, D } from '../../../../lib/client.js';
 import { F, procLabel } from '../../../../lib/fields.js';
 
-const SHOW = ['opd', 'name', 'gender', 'date', 'plantDate', 'nat', 'procType', 'hairMethod', 'proc', 'area', 'tool', 'inj', 'ct', 'visitPeriod', 'cell', 'doc', 'ph', 'ck'];
+const SHOW = ['opd', 'name', 'gender', 'age', 'date', 'plantDate', 'nat', 'procType', 'hairMethod', 'proc', 'area', 'tool', 'inj', 'ct', 'visitPeriod', 'cell', 'doc', 'ph', 'ck'];
 const label = (k) => (k === 'proc' ? 'หัตถการ' : F[k].l);
 const val = (k, v) => (F[k]?.t === 'date' ? D(v) : v);
 const Grid = ({ o }) => (
