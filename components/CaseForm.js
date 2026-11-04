@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Field from './Field.js';
 import { useMe, useToast, Denied, Spinner } from './Ctx.js';
-import { F, STEPS, GENDERS, FORM_TITLES, groupsFor, keysFor, OPD_RE, OPD_ERR } from '../lib/fields.js';
+import { F, STEPS, GENDERS, FORM_TITLES, PROC_DEP_KEYS, isShown, shownKeys, groupsFor, keysFor, OPD_RE, OPD_ERR } from '../lib/fields.js';
 import { api, useApi, today, bytes } from '../lib/client.js';
 
 const MAX_FILES = 30;
@@ -41,7 +41,7 @@ function putFile(url, file, onPct) {
 
 export default function CaseForm({ formType }) {
   const { perms } = useMe(), toast = useToast(), router = useRouter();
-  const { data: od } = useApi('/api/options'), opt = od?.options;
+  const { data: od } = useApi('/api/options?formType=' + formType), opt = od?.options;
   const steps = STEPS[formType], canUpload = perms.upload, groups = groupsFor(formType);
   const imageStep = steps.length, totalSteps = steps.length + (canUpload ? 1 : 0);
   const [v, setV] = useState(null), [errs, setErrs] = useState({}), [step, setStep] = useState(0);
@@ -55,7 +55,7 @@ export default function CaseForm({ formType }) {
     for (const k of keysFor(formType)) {
       const f = F[k];
       if (x[k] !== undefined) continue;
-      x[k] = f.o ? f.o[0] : f.og && f.t !== 'text' ? o?.[f.og]?.[0] || '' : '';
+      x[k] = f.blank || f.t === 'multi' || k === 'procType' ? '' : f.o ? f.o[0] : f.og && f.t !== 'text' ? o?.[f.og]?.[0] || '' : '';
     }
     x.gender = x.gender || GENDERS[0];
     return x;
@@ -76,15 +76,21 @@ export default function CaseForm({ formType }) {
       try {
         const { data } = await api('/api/records/autofill?opd=' + encodeURIComponent(opd));
         filledFor.current = opd;
-        if (data) { setV((p) => ({ ...p, ...Object.fromEntries(Object.entries(data).filter(([k]) => keysFor(formType).includes(k))) })); toast('เติมข้อมูลเดิมของ OPD นี้ให้แล้ว'); }
+        // เติมเฉพาะช่องที่มีในฟอร์มนี้ และชื่อทีมงานที่ยังอยู่ในรายการของฟอร์มนี้
+        const ok = ([k, val]) => keysFor(formType).includes(k) && (!F[k].og?.startsWith('t') || opt?.[F[k].og]?.includes(val));
+        if (data) { setV((p) => ({ ...p, ...Object.fromEntries(Object.entries(data).filter(ok)) })); toast('เติมข้อมูลเดิมของ OPD นี้ให้แล้ว'); }
       } catch {}
     }, 450);
     return () => clearTimeout(t);
-  }, [v?.opd, formType, toast]);
+  }, [v?.opd, formType, toast, opt]);
 
   if (!perms.fillForm) return <Denied />;
   if (!v) return <Spinner />;
-  const set = (k, val) => { setV((p) => ({ ...p, [k]: val })); setErrs((e) => (e[k] ? { ...e, [k]: '' } : e)); };
+  const set = (k, val) => {
+    // เปลี่ยนประเภทหัตถการ → ล้างช่องย่อยของประเภทเดิม
+    setV((p) => ({ ...p, [k]: val, ...(k === 'procType' && val !== p.procType ? Object.fromEntries(PROC_DEP_KEYS.map((d) => [d, ''])) : {}) }));
+    setErrs((e) => (e[k] || (k === 'procType' && PROC_DEP_KEYS.some((d) => e[d])) ? { ...e, [k]: '', ...(k === 'procType' ? Object.fromEntries(PROC_DEP_KEYS.map((d) => [d, ''])) : {}) } : e));
+  };
   const patch = (id, p) => commit(filesRef.current.map((f) => (f.id === id ? { ...f, ...p } : f)));
   const busy = phase === 'busy';
 
@@ -108,7 +114,7 @@ export default function CaseForm({ formType }) {
 
   function validate() {
     const e = {};
-    for (const k of keysFor(formType)) { const f = F[k]; if (f.req && !String(v[k] || '').trim()) e[k] = `กรุณากรอก${f.l}`; }
+    for (const k of shownKeys(formType, v)) { const f = F[k]; if (f.req && !String(v[k] || '').trim()) e[k] = ['select', 'multi', 'pills'].includes(f.t) ? `กรุณาเลือก${f.l}` : `กรุณากรอก${f.l}`; }
     if (!e.opd && !OPD_RE.test(v.opd || '')) e.opd = OPD_ERR;
     setErrs(e);
     const bad = steps.findIndex((s) => s[1].some((k) => e[k]));
@@ -224,7 +230,7 @@ export default function CaseForm({ formType }) {
         {steps.map((s, i) => (
           <div className="card sec" data-s={i} key={s[0]}>
             <h2>{s[0]}</h2>
-            <div className="f2">{s[1].map((k) => <Field key={k} k={k} value={v[k] ?? ''} onChange={set} options={opt} error={errs[k]} />)}</div>
+            <div className="f2">{s[1].filter((k) => isShown(k, v)).map((k) => <Field key={k} k={k} value={v[k] ?? ''} onChange={set} options={opt} error={errs[k]} />)}</div>
             {i === steps.length - 1 && <><h3 style={{ margin: '16px 0 4px' }}>ข้อมูลเพิ่มเติม</h3><label htmlFor="f-note">หมายเหตุ</label><textarea id="f-note" rows={2} value={v.note} onChange={(e) => set('note', e.target.value)} maxLength={1000} /></>}
           </div>
         ))}

@@ -33,7 +33,7 @@ export default function Forms() {
   return (
     <>
       <h1>จัดการฟอร์ม</h1>
-      <p className="mu">แก้ไขรายการตัวเลือกในฟอร์ม (เช่น รายชื่อแพทย์ เซลล์ ทีมงาน เครื่องมือ) — มีผลกับฟอร์มที่กรอกใหม่ ข้อมูลเดิมไม่เปลี่ยน</p>
+      <p className="mu">แก้ไขรายการตัวเลือกในฟอร์ม (เช่น รายชื่อแพทย์ เซลล์ ทีมงาน เครื่องมือ) — มีผลกับฟอร์มที่กรอกใหม่ ข้อมูลเดิมไม่เปลี่ยน · รายชื่อแพทย์/เซลล์/ใครถ่าย/ตรวจสอบโดย ดึงจากบัญชีผู้ใช้ตามบทบาทอัตโนมัติ (เพิ่มหรือปิดได้ที่ “จัดการผู้ใช้”)</p>
       {error ? <div className="card empty" style={{ color: 'var(--dn)' }}>{error}</div> : !data ? <Spinner /> : (
         <div className="grid2">{Object.keys(OPTION_GROUPS).map((k) => <Group key={k} k={k} list={data.options[k]} onSaved={(options) => mutate({ options })} />)}</div>
       )}

@@ -6,13 +6,13 @@ import { useMe, Denied, Spinner } from '../../../../components/Ctx.js';
 import MediaViewer from '../../../../components/MediaViewer.js';
 import RecordEditor from '../../../../components/RecordEditor.js';
 import { useApi, D } from '../../../../lib/client.js';
-import { F } from '../../../../lib/fields.js';
+import { F, procLabel } from '../../../../lib/fields.js';
 
-const SHOW = ['opd', 'name', 'gender', 'date', 'plantDate', 'nat', 'hairMethod', 'proc', 'area', 'tool', 'inj', 'ct', 'visitPeriod', 'cell', 'doc', 'ph', 'ck'];
+const SHOW = ['opd', 'name', 'gender', 'date', 'plantDate', 'nat', 'procType', 'hairMethod', 'proc', 'area', 'tool', 'inj', 'ct', 'visitPeriod', 'cell', 'doc', 'ph', 'ck'];
 const label = (k) => (k === 'proc' ? 'หัตถการ' : F[k].l);
 const val = (k, v) => (F[k]?.t === 'date' ? D(v) : v);
 const Grid = ({ o }) => (
-  <div className="detail-grid">{SHOW.filter((k) => o[k] && o[k] !== '—').map((k) => <div key={k}><small>{label(k)}</small><b>{val(k, o[k])}</b></div>)}</div>
+  <div className="detail-grid">{SHOW.filter((k) => o[k] && o[k] !== '—' && !(k === 'proc' && o.procType)).map((k) => <div key={k}><small>{label(k)}</small><b>{val(k, o[k])}</b></div>)}</div>
 );
 
 export default function Patient() {
@@ -23,7 +23,7 @@ export default function Patient() {
   if (!perms.viewImages) return <Denied />;
   if (error && !p) return <div className="card empty" style={{ color: 'var(--dn)' }}>{error}</div>;
   if (loading && !p) return <Spinner />;
-  const procOf = (r) => (r.area ? 'ปลูก' + r.area : r.inj || '');
+  const procOf = (r) => (r.procType ? '' : procLabel(r) === '—' ? '' : procLabel(r));
   return (
     <>
       <div className="row sp"><Link className="btn s sm" href="/search">← ย้อนกลับ</Link><span className="mu">{p.opd}</span></div>
