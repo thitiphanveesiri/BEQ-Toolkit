@@ -27,9 +27,9 @@ export const POST = route({ perm: 'upload' }, async ({ req, user, body }) => {
   const seq = Math.max(0, Math.min(MAX_PER_GROUP, Number(body.seq) || 0));
   if (have + seq >= MAX_PER_GROUP) throw new AppError(400, `ช่องนี้เต็มแล้ว (สูงสุด ${MAX_PER_GROUP} ไฟล์)`);
   // ตั้งชื่อไฟล์ตามกฎ: OPD-ชื่อ-วันที่-เครื่องมือ-ช่อง-ลำดับ
-  const fileName = [rec.opd, rec.name, rec.date, rec.tool, groupLabel(group), String(have + seq + 1).padStart(2, '0')].filter(Boolean).map(safeName).join('-') + ext;
+  const fileName = [rec.opd, rec.name, rec.date, (rec.hairMethod || rec.tool || rec.inj || ''), groupLabel(group), String(have + seq + 1).padStart(2, '0')].filter(Boolean).map(safeName).join('-') + ext;
   const mediaId = uid('M-');
-  const { driveId, uploadUrl } = await startUpload({ rec, fileName, mime, size, origin: req.headers.get('origin'), mediaId });
+  const { driveId, uploadUrl } = await startUpload({ rec, group, fileName, mime, size, origin: req.headers.get('origin'), mediaId });
   const token = signToken({ u: user.id, id: mediaId, d: driveId, r: rec.id, o: rec.opd, g: group, k: kind, n: fileName, m: mime, s: size });
   return { uploadUrl, token, fileName };
 });

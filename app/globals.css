@@ -178,3 +178,14 @@ table .num{text-align:right}
 @media(max-width:600px){.cmp{grid-template-columns:1fr}.thumb img,.thumb .ph{height:96px}}
 .opdbox{display:flex;align-items:stretch}.opdpre{display:grid;place-items:center;padding:0 12px;border:1px solid var(--bd);border-right:0;border-radius:10px 0 0 10px;background:var(--mt);font-weight:600;color:var(--mu)}
 .opdbox input{border-radius:0 10px 10px 0;letter-spacing:.06em}
+
+/* ===== Dashboard บนมือถือ: KPI 2 คอลัมน์, กราฟแท่งแสดงชื่อเต็มบนบรรทัดแยก ===== */
+.kpi .stat{padding:14px 16px}
+@media(max-width:600px){
+ .kpi{grid-template-columns:1fr 1fr;gap:10px}.kpi .stat{padding:12px}.kpi .stat .mu{font-size:11px;line-height:1.35;display:block;min-height:30px}.kpi .stat b{font-size:24px}
+ .hr{grid-template-columns:1fr auto;grid-template-areas:"l n" "b b";gap:3px 8px;margin:10px 0}
+ .hr>span{grid-area:l;white-space:normal;overflow:visible;font-size:13px;line-height:1.35}.hr>div{grid-area:b;height:10px}.hr>b{grid-area:n}
+ .grid2{gap:12px}.grid2>.card h2{font-size:16px}
+ .hero2{padding:18px 16px}.hero2 h1{font-size:20px}
+ .mcard{padding:14px}
+}

@@ -20,7 +20,7 @@ export default function Dashboard() {
     <>
       <div className="hero2"><small>WELCOME BACK</small><h1>สวัสดี{hello}, {user.name}</h1><p>ยินดีต้อนรับสู่ระบบจัดการภาพคนไข้และติดตามผล</p><span className="chip">{ROLES[user.role]}</span> <span className="chip">{D(new Date().toISOString().slice(0, 10))}</span></div>
       {perms.viewStats && (
-        <div className="grid" style={{ marginBottom: 16 }}>
+        <div className="grid kpi" style={{ marginBottom: 16 }}>
           {[['ฟอร์มที่ส่งทั้งหมด', st?.kpi.records], ['คนไข้ (OPD)', st?.kpi.patients], ['ส่งรูปภาพ (ครั้ง)', st?.kpi.photoSubmissions], ['กลับมา F/U', st?.kpi.returning]].map(([l, n]) => (
             <div className="card stat" style={{ margin: 0 }} key={l}><span className="mu">{l}</span><b>{n ?? '–'}</b></div>
           ))}

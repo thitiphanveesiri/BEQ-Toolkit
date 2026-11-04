@@ -22,7 +22,7 @@ export default function Reports() {
       </div>
       {error ? <div className="card empty" style={{ color: 'var(--dn)' }}>{error}</div> : loading && !data ? <Spinner /> : (
         <>
-          <div className="grid" style={{ marginBottom: 16 }}>{K.map(([l, n, ic]) => <div className="card stat" style={{ margin: 0 }} key={l}><span className="mu">{ic} {l}</span><b>{n}</b></div>)}</div>
+          <div className="grid kpi" style={{ marginBottom: 16 }}>{K.map(([l, n, ic]) => <div className="card stat" style={{ margin: 0 }} key={l}><span className="mu">{ic} {l}</span><b>{n}</b></div>)}</div>
           <div className="grid2">
             {data.charts.map((c) => {
               const max = Math.max(1, ...c.data.map((e) => e[1]));
