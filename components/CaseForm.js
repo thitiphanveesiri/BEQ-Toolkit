@@ -164,8 +164,8 @@ export default function CaseForm({ formType }) {
     if (!e.opd && !OPD_RE.test(v.opd || '')) e.opd = OPD_ERR;
     setErrs(e);
     const bad = steps.findIndex((s) => s[1].some((k) => e[k]));
-    if (bad >= 0) { setStep(bad); toast(Object.values(e)[0]); setTimeout(() => document.querySelector('#nf [aria-invalid=true]')?.focus(), 50); return false; }
-    if (canUpload && !files.length) { setStep(imageStep); setPhotoErr('ต้องเลือกอย่างน้อย 1 รูปหรือวิดีโอก่อนบันทึกเคส'); toast('กรุณาเลือกรูปหรือวิดีโออย่างน้อย 1 ไฟล์'); return false; }
+    if (bad >= 0) { setStep(bad); toast(Object.values(e)[0]); setTimeout(() => { const el = document.querySelector('#nf [aria-invalid=true]'); el?.focus?.(); (document.querySelector('#nf .fe') || el)?.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 50); return false; }
+    if (canUpload && !files.length) { setTimeout(() => document.querySelector('.acc-card')?.scrollIntoView({ block: 'center' }), 50); setPhotoErr('ต้องเลือกอย่างน้อย 1 รูปหรือวิดีโอก่อนบันทึกเคส'); toast('กรุณาเลือกรูปหรือวิดีโออย่างน้อย 1 ไฟล์'); return false; }
     return true;
   }
 
@@ -199,7 +199,6 @@ export default function CaseForm({ formType }) {
   async function submit(e) {
     e?.preventDefault();
     if (busy) return;
-    if (matchMedia('(max-width:900px)').matches && step < totalSteps - 1) return go(1);
     if (!validate()) return;
     setPhase('busy');
     try {
@@ -284,7 +283,7 @@ export default function CaseForm({ formType }) {
   return (
     <>
       <div className="row sp"><h1>{FORM_TITLES[formType]}</h1><button className="btn s" onClick={() => router.push('/dashboard')} disabled={busy}>← ยกเลิก</button></div>
-      <div className="stp"><div className="bar"><i style={{ width: Math.round(((step + 1) * 100) / totalSteps) + '%' }} /></div><p className="mu">ขั้นตอน {step + 1}/{totalSteps} · {stepTitles[step]}{missing > 0 && <span className="todo"> · ยังต้องกรอก {missing} ช่อง</span>}</p></div>
+      {missing > 0 && <div className="stp"><p className="mu"><span className="todo">ยังต้องกรอก {missing} ช่อง</span></p></div>}
       {phase === 'edit' && restored && <div className="banner" role="status" style={{ margin: '0 0 10px' }}>กู้คืนข้อมูลที่กรอกค้างไว้เมื่อ {restored} — รูป/วิดีโอต้องเลือกใหม่ <button type="button" className="btn s sm" style={{ marginLeft: 8 }} onClick={startOver}>ล้างและเริ่มใหม่</button></div>}
       {phase === 'edit' && !restored && <p className="mu" style={{ fontSize: 12, margin: '0 0 8px' }}>💾 ข้อมูลที่กรอกจะถูกบันทึกเป็นร่างอัตโนมัติในเครื่องนี้ (รูป/วิดีโอไม่ถูกเก็บ)</p>}
       <form id="nf" className={'s' + step} noValidate onSubmit={submit}>
@@ -318,8 +317,8 @@ export default function CaseForm({ formType }) {
           <>
             <div className="row dsk"><button className="btn" disabled={busy}>{busy ? <><span className="spin" /> กำลังบันทึก...</> : '💾 บันทึกเคส'}</button><button type="button" className="btn s" onClick={() => router.push('/dashboard')} disabled={busy}>ยกเลิก</button></div>
             <div className="stpbar">
-              {step > 0 ? <button type="button" className="btn s" onClick={() => go(-1)} disabled={busy}>← ย้อนกลับ</button> : <button type="button" className="btn s" onClick={() => router.push('/dashboard')}>ยกเลิก</button>}
-              {step < totalSteps - 1 ? <button key="next" type="button" className="btn" onClick={() => go(1)}>ถัดไป →</button> : <button key="save" type="submit" className="btn" disabled={busy}>{busy ? 'กำลังบันทึก...' : '💾 บันทึกเคส'}</button>}
+              <button type="button" className="btn s" onClick={() => router.push('/dashboard')} disabled={busy}>ยกเลิก</button>
+              <button key="save" type="submit" className="btn" disabled={busy}>{busy ? 'กำลังบันทึก...' : '💾 บันทึกเคส'}</button>
             </div>
           </>
         )}
