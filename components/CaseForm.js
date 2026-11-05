@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Field from './Field.js';
 import { useMe, useToast, Denied, Spinner } from './Ctx.js';
-import { F, BASIC_LOCK, STEPS, GENDERS, ROUNDS, FORM_TITLES, depsToClear, isShown, shownKeys, groupsFor, keysFor, labelOf, minDateFor, OPD_RE, OPD_ERR } from '../lib/fields.js';
+import { F, isReq, BASIC_LOCK, STEPS, GENDERS, ROUNDS, FORM_TITLES, depsToClear, isShown, shownKeys, groupsFor, keysFor, labelOf, minDateFor, OPD_RE, OPD_ERR } from '../lib/fields.js';
 import { api, useApi, today, bytes } from '../lib/client.js';
 
 const MAX_IMG = 50, MAX_VID = 10; // ต่อช่อง: รูปภาพ 50 รูป, วิดีโอ 10 คลิป (แยกช่องส่งกัน)
@@ -106,7 +106,7 @@ export default function CaseForm({ formType }) {
         // เติมเฉพาะช่องที่มีในฟอร์มนี้ และชื่อทีมงานที่ยังอยู่ในรายการของฟอร์มนี้
         const ok = ([k, val]) => keysFor(formType).includes(k) &&  (!/^t[A-Z]/.test(F[k].og || '') || opt?.[F[k].og]?.includes(val));
         if (data) {
-          const fill = Object.entries(data).filter(ok).filter(([k]) => !(k === 'round' && formType === 'day0')); // Day 0: ให้ผู้กรอกเลือกครั้งที่เอง
+          const fill = Object.entries(data).filter(ok).filter(([k]) => !(k === 'round' && formType === 'day0')); // Day 0: ให้ผู้กรอกเลือกครั้งที่เอง // Day 0: ให้ผู้กรอกเลือกครั้งที่เอง
           setV((p) => ({ ...p, ...Object.fromEntries(fill) }));
           const lk = new Set(BASIC_LOCK.filter((k) => keysFor(formType).includes(k) && String(data[k] || '').trim()));
           wasLocked.current = lk.size > 0; setLocked(lk);
@@ -127,8 +127,8 @@ export default function CaseForm({ formType }) {
   };
   const patch = (id, p) => commit(filesRef.current.map((f) => (f.id === id ? { ...f, ...p } : f)));
   const busy = phase === 'busy';
-  // ครั้งที่เข้ามารับหัตถการ: Day 0 แสดงเมื่อใส่ HN เดิม · BEQ Hair Center แสดงเมื่อมีหัตถการมากกว่า 1 รอบ · ไม่แสดง = ครั้งที่ 1
-  const showRound = formType === 'day0' ? !!meta : (meta?.maxRound || 1) > 1;
+  // ครั้งที่เข้ามารับหัตถการ: Day 0 แสดงเมื่อใส่ HN เดิม · F/U ไม่มีช่องนี้ (ใช้รอบล่าสุดของคนไข้) · ไม่แสดง = ครั้งที่ 1
+  const showRound = formType === 'day0' && !!meta;
   const roundNote = formType === 'day0' && meta?.day0Rounds?.includes(ROUNDS.indexOf(v.round) + 1) ? 'มี Day 0 ของรอบนี้อยู่แล้ว — บันทึกแล้วข้อมูลจะอัปเดตทับของเดิม และรูปใหม่จะเข้าชุดเดิม' : '';
 
   async function addFiles(group, want, list) {
@@ -159,7 +159,7 @@ export default function CaseForm({ formType }) {
 
   function validate() {
     const e = {};
-    for (const k of shownKeys(formType, v)) { const f = F[k]; if (f.req && !String(v[k] || '').trim()) e[k] = ['select', 'multi', 'pills'].includes(f.t) ? `กรุณาเลือก${labelOf(k, formType)}` : `กรุณากรอก${labelOf(k, formType)}`; }
+    for (const k of shownKeys(formType, v)) { const f = F[k]; if (isReq(k, formType) && !String(v[k] || '').trim()) e[k] = ['select', 'multi', 'pills'].includes(f.t) ? `กรุณาเลือก${labelOf(k, formType)}` : `กรุณากรอก${labelOf(k, formType)}`; }
     for (const k of shownKeys(formType, v)) { const min = minDateFor(k, formType, today()); if (!e[k] && min && v[k] < min) e[k] = `${labelOf(k, formType)}เลือกย้อนหลังได้ไม่เกิน 1 วัน`; }
     if (!e.opd && !OPD_RE.test(v.opd || '')) e.opd = OPD_ERR;
     setErrs(e);
@@ -280,7 +280,7 @@ export default function CaseForm({ formType }) {
   };
 
   const failed = files.filter((f) => f.status === 'error').length;
-  const missing = shownKeys(formType, v).filter((k) => F[k].req && !String(v[k] || '').trim()).length; // จำนวนช่องบังคับที่ยังว่าง
+  const missing = shownKeys(formType, v).filter((k) => isReq(k, formType) && !String(v[k] || '').trim()).length; // จำนวนช่องบังคับที่ยังว่าง
   return (
     <>
       <div className="row sp"><h1>{FORM_TITLES[formType]}</h1><button className="btn s" onClick={() => router.push('/dashboard')} disabled={busy}>← ยกเลิก</button></div>

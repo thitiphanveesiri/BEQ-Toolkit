@@ -11,6 +11,22 @@ import { F, procLabel, roundNo, labelOf } from '../../../../lib/fields.js';
 // ข้อมูลประจำตัวคนไข้ (ด้านบน) และข้อมูลของแต่ละครั้งที่ส่งฟอร์ม (ในแต่ละ dropdown)
 const SHOW = ['opd', 'name', 'gender', 'age', 'nat', 'round', 'plant', 'uploaded', 'procType', 'area', 'hairMethod', 'tool', 'inj', 'ct', 'visitPeriod', 'cell', 'doc', 'ph', 'ck'];
 const REC_SHOW = ['date', 'plantDate', 'uploaded', 'round', 'procType', 'area', 'hairMethod', 'tool', 'inj', 'ct', 'visitPeriod', 'cell', 'doc', 'ph', 'ck'];
+const FU_TXT = { soon: 'ใกล้ถึงนัด', today: 'ถึงนัดวันนี้', overdue: 'เลยนัดแล้ว', done: 'มา F/U แล้ว', future: 'ยังไม่ถึงนัด', missed: 'เลยกำหนด' };
+// แถบนัด F/U ตามระยะ 1/3/6/9/12 เดือน (นับจากวันที่มาปลูก) — ระยะที่ใกล้ถึง/เลยนัดจะเน้นสี
+const FollowUps = ({ list }) => {
+  if (!list?.length) return null;
+  const act = list.filter((s) => ['soon', 'today', 'overdue'].includes(s.status));
+  return (
+    <div className="fu-wrap">
+      {act.map((s) => (
+        <div key={s.months} className={'fu-alert ' + s.status} role="alert">
+          🔔 <b>{FU_TXT[s.status]}: F/U ระยะ {s.months} เดือน</b> — นัดประมาณ {D(s.due)} {s.days > 0 ? `(อีก ${s.days} วัน)` : s.days < 0 ? `(เลยมา ${-s.days} วัน)` : ''}
+        </div>
+      ))}
+      <div className="fu-row">{list.map((s) => <span key={s.months} className={'fu-chip ' + s.status} title={`${FU_TXT[s.status]} · ${D(s.due)}`}>{s.months} เดือน · {D(s.due)}{s.status === 'done' ? ' ✓' : ''}</span>)}</div>
+    </div>
+  );
+};
 const EXTRA = { proc: 'หัตถการ', plant: 'วันที่มาปลูก', uploaded: 'วันที่อัปโหลด' }; // ช่องที่คำนวณเอง ไม่ได้เก็บเป็นคอลัมน์
 const label = (k, ft) => EXTRA[k] || labelOf(k, ft);
 const val = (k, v) => (F[k]?.t === 'date' || k === 'plant' || k === 'uploaded' ? D(v) : v);
@@ -47,9 +63,10 @@ export default function Patient() {
       </div>
       {tab === 'info' ? (
         <div className="card">
+          <FollowUps list={p.followups} />
           <section className="acc" style={{ marginTop: 0 }}>
             <button className="acc-h" aria-expanded={sumOpen} onClick={() => setSumOpen(!sumOpen)}><span className="ch">▸</span><span>ข้อมูลล่าสุดของคนไข้</span><span className="sp2" /></button>
-            {sumOpen && <div className="acc-b"><Grid o={summary} /></div>}
+            {sumOpen && <div className="acc-b"><Grid o={summary} />{p.extra && <div className="extra-box"><small>⭐ หัตถการเพิ่มเติม (ล่าสุด · {p.extra.period || 'F/U'} · {D(p.extra.date)})</small><b>{p.extra.proc}{p.extra.detail ? ' — ' + p.extra.detail : ''}</b></div>}</div>}
           </section>
           <div className="row sp" style={{ marginTop: 18 }}>
             <h2 style={{ margin: 0 }}>ประวัติฟอร์มของ OPD นี้ ({recs.length})</h2>
@@ -64,7 +81,7 @@ export default function Patient() {
               <section className="acc" key={r.id}>
                 <button className="acc-h" aria-expanded={o} aria-controls={'r-' + r.id} onClick={() => toggle(r.id)}>
                   <span className="ch">▸</span><span>{pre(r)}{r.formType === 'day0' ? 'คนไข้เข้ารับบริการ(DAY 0)' : r.visitPeriod || 'คนไข้ติดตามผลตามระยะ Follow-Up(F/U)'}</span>
-                  <span className="mu" style={{ fontWeight: 400 }}>{D(r.date)}</span><span className="sp2" /><span className="tag">{n} ไฟล์</span>
+                  <span className="mu" style={{ fontWeight: 400 }}>{D(r.date)}</span><span className="sp2" />{r.extra && <span className="tag extra-tag">⭐ หัตถการเพิ่มเติม</span>}<span className="tag">{n} ไฟล์</span>
                 </button>
                 {o && (
                   <div className="acc-b" id={'r-' + r.id}>

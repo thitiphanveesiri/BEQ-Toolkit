@@ -232,3 +232,18 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--dn)!import
 .fld.lk .pill input:disabled+span{opacity:.6}
 
 .up-item video{width:100%;height:auto;max-height:420px;background:#000;border-radius:8px;border:1px solid var(--bd);display:block}
+
+/* หัตถการเพิ่มเติม + แจ้งเตือนนัด F/U */
+.extra-box{margin-top:12px;padding:12px 14px;border-radius:12px;background:color-mix(in srgb,#f59e0b 20%,transparent);border:2px solid #f59e0b;display:grid;gap:2px}
+.extra-box small{font-weight:700;color:#b45309}.extra-box b{font-size:16px}
+.tag.extra-tag{background:#f59e0b;color:#fff;font-weight:700}
+.fu-wrap{margin-bottom:14px;display:grid;gap:8px}
+.fu-alert{padding:10px 14px;border-radius:12px;font-size:14px;border:2px solid var(--wn);background:color-mix(in srgb,var(--wn) 16%,transparent)}
+.fu-alert.overdue{border-color:var(--dn);background:color-mix(in srgb,var(--dn) 14%,transparent)}
+.fu-row{display:flex;flex-wrap:wrap;gap:6px}
+.fu-chip{font-size:12px;padding:4px 10px;border-radius:99px;border:1px solid var(--bd);color:var(--mu)}
+.fu-chip.done{border-color:var(--ok);color:var(--ok)}.fu-chip.soon,.fu-chip.today{border-color:var(--wn);color:var(--wn);font-weight:700}.fu-chip.overdue{border-color:var(--dn);color:var(--dn);font-weight:700}
+.fu-card{border:2px solid var(--wn)}
+.fu-list{display:grid;gap:6px}
+.fu-item{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;padding:10px 12px;border-radius:10px;border:1px solid var(--bd);text-decoration:none;color:inherit}
+.fu-item:hover{background:var(--mt)}.fu-item.overdue{border-color:var(--dn)}
