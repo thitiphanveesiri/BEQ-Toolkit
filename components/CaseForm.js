@@ -123,7 +123,7 @@ export default function CaseForm({ formType }) {
       const ext = f.name.split('.').pop().toLowerCase();
       const type = f.type || VIDEO_EXT[ext] || IMG_EXT[ext] || '';
       if (type.startsWith('image/')) { const s = await shrink(f.type ? f : new File([f], f.name, { type })); out.push({ id: ++seqId, group, file: s, kind: 'image', url: URL.createObjectURL(s), status: 'queued', pct: 0 }); }
-      else if (type.startsWith('video/')) out.push({ id: ++seqId, group, file: f.type ? f : new File([f], f.name, { type }), kind: 'video', url: '', status: 'queued', pct: 0 });
+      else if (type.startsWith('video/')) { const vf = f.type ? f : new File([f], f.name, { type }); out.push({ id: ++seqId, group, file: vf, kind: 'video', url: URL.createObjectURL(vf), status: 'queued', pct: 0 }); }
       else toast(`ไม่รองรับไฟล์ ${f.name}`);
     }
     commit([...filesRef.current, ...out]); setPhotoErr('');
@@ -229,7 +229,7 @@ export default function CaseForm({ formType }) {
           <div className="imgs">
             {items.map((f) => (
               <figure key={f.id} className={'up-item ' + (f.status === 'error' ? 'err' : f.status === 'saved' ? 'ok' : '')}>
-                {f.kind === 'image' ? <img src={f.url} alt={f.file.name} /> : <div className="vid">🎬</div>}
+                {f.kind === 'image' ? <img src={f.url} alt={f.file.name} /> : <video src={f.url + '#t=0.1'} controls playsInline preload="metadata" aria-label={f.file.name} />}
                 <figcaption>{f.file.name.length > 22 ? f.file.name.slice(0, 20) + '…' : f.file.name} · {bytes(f.file.size)}</figcaption>
                 {(f.status === 'uploading' || f.status === 'uploaded') && <div className="bar"><i style={{ width: f.pct + '%' }} /></div>}
                 <div className="st">{{ queued: '', uploading: `กำลังอัปโหลด ${f.pct}%`, uploaded: 'กำลังบันทึก...', saved: '✓ เรียบร้อย', error: f.error }[f.status]}</div>

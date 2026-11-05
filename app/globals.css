@@ -230,3 +230,5 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--dn)!import
 .mrow input{width:18px;height:18px;margin:0;flex:none}
 .fld.lk input:not([type=radio]):not([type=checkbox]){background:rgba(0,0,0,.05);color:inherit;opacity:.85}
 .fld.lk .pill input:disabled+span{opacity:.6}
+
+.up-item video{width:100%;height:auto;max-height:420px;background:#000;border-radius:8px;border:1px solid var(--bd);display:block}
