@@ -118,14 +118,20 @@ export default function CaseForm({ formType }) {
     if (room <= 0) return toast(`ช่องนี้เลือกครบ ${MAX_FILES} ไฟล์แล้ว`);
     const picked = [...list];
     if (picked.length > room) toast(`เพิ่มได้อีก ${room} ไฟล์ (จำกัด ${MAX_FILES} ไฟล์ต่อช่อง)`);
-    const out = [];
-    for (const f of picked.slice(0, room)) {
-      const ext = f.name.split('.').pop().toLowerCase();
-      const type = f.type || VIDEO_EXT[ext] || IMG_EXT[ext] || '';
-      if (type.startsWith('image/')) { const s = await shrink(f.type ? f : new File([f], f.name, { type })); out.push({ id: ++seqId, group, file: s, kind: 'image', url: URL.createObjectURL(s), status: 'queued', pct: 0 }); }
-      else if (type.startsWith('video/')) { const vf = f.type ? f : new File([f], f.name, { type }); out.push({ id: ++seqId, group, file: vf, kind: 'video', url: URL.createObjectURL(vf), status: 'queued', pct: 0 }); }
-      else toast(`ไม่รองรับไฟล์ ${f.name}`);
-    }
+    // ย่อรูปพร้อมกันหลายไฟล์ (ทีละ 4) แทนทีละรูป — เลือกรูปเยอะๆ แล้วพร้อมส่งเร็วขึ้นมาก
+    const list2 = picked.slice(0, room), res = new Array(list2.length); let n = 0;
+    const one = async () => {
+      while (n < list2.length) {
+        const i = n++, f = list2[i];
+        const ext = f.name.split('.').pop().toLowerCase();
+        const type = f.type || VIDEO_EXT[ext] || IMG_EXT[ext] || '';
+        if (type.startsWith('image/')) { const s = await shrink(f.type ? f : new File([f], f.name, { type })); res[i] = { id: ++seqId, group, file: s, kind: 'image', url: URL.createObjectURL(s), status: 'queued', pct: 0 }; }
+        else if (type.startsWith('video/')) { const vf = f.type ? f : new File([f], f.name, { type }); res[i] = { id: ++seqId, group, file: vf, kind: 'video', url: URL.createObjectURL(vf), status: 'queued', pct: 0 }; }
+        else toast(`ไม่รองรับไฟล์ ${f.name}`);
+      }
+    };
+    await Promise.all([one(), one(), one(), one()]);
+    const out = res.filter(Boolean);
     commit([...filesRef.current, ...out]); setPhotoErr('');
   }
   const remove = (id) => { const f = filesRef.current.find((x) => x.id === id); if (f?.url) URL.revokeObjectURL(f.url); commit(filesRef.current.filter((x) => x.id !== id)); };
@@ -156,7 +162,7 @@ export default function CaseForm({ formType }) {
         } catch (x) { patch(f.id, { status: 'error', error: x.message }); }
       }
     };
-    await Promise.all([worker(), worker(), worker()]);
+    await Promise.all([worker(), worker(), worker(), worker(), worker()]); // อัปโหลดพร้อมกัน 5 ไฟล์
     const up = filesRef.current.filter((f) => f.status === 'uploaded');
     for (let i = 0; i < up.length; i += 30) {
       const chunk = up.slice(i, i + 30);
