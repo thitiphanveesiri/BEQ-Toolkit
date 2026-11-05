@@ -48,6 +48,7 @@ export default function CaseForm({ formType }) {
   const [files, setFiles] = useState([]); // {id,group,file,url,kind,status,pct,error}
   const [phase, setPhase] = useState('edit'), [recordId, setRecordId] = useState(null), [photoErr, setPhotoErr] = useState('');
   const filledFor = useRef(''), filesRef = useRef([]);
+  const [shut, setShut] = useState(() => new Set()); // กลุ่มรูปที่ย่อเก็บอยู่ (ตอนส่งรูป)
   const commit = (next) => { filesRef.current = next; setFiles(next); };
 
   const blank = useCallback((o) => {
@@ -194,16 +195,20 @@ export default function CaseForm({ formType }) {
   );
 
   const photoCard = (g) => {
-    const items = files.filter((f) => f.group === g[0]);
+    const items = files.filter((f) => f.group === g[0]), isShut = shut.has(g[0]);
+    const done = items.filter((f) => f.status === 'saved').length, bad = items.filter((f) => f.status === 'error').length;
     return (
-      <div className="card" key={g[0]}>
-        <b>{g[1]} · {items.length}/{MAX_FILES} ไฟล์</b>
-        {phase === 'edit' && (
+      <div className="card acc-card" key={g[0]}>
+        <button type="button" className="acc-h" style={{ padding: '4px 2px', minHeight: 44 }} aria-expanded={!isShut} onClick={() => setShut((s) => { const n = new Set(s); n.has(g[0]) ? n.delete(g[0]) : n.add(g[0]); return n; })}>
+          <span className="ch">▸</span><span>{g[1]}</span><span className="sp2" />
+          <span className="tag">{items.length}/{MAX_FILES} ไฟล์{done ? ` · ✓${done}` : ''}{bad ? ` · ⚠${bad}` : ''}</span>
+        </button>
+        {!isShut && phase === 'edit' && (
           <div className="row" style={{ margin: '8px 0' }}>
             <label className="btn s">🖼️ เลือกไฟล์<input type="file" accept="image/*,video/*" multiple hidden onChange={(e) => { addFiles(g[0], e.target.files); e.target.value = ''; }} /></label>
           </div>
         )}
-        {items.length ? (
+        {!isShut && (items.length ? (
           <div className="imgs">
             {items.map((f) => (
               <figure key={f.id} className={'up-item ' + (f.status === 'error' ? 'err' : f.status === 'saved' ? 'ok' : '')}>
@@ -215,7 +220,7 @@ export default function CaseForm({ formType }) {
               </figure>
             ))}
           </div>
-        ) : <div className="empty">ยังไม่มีไฟล์</div>}
+        ) : <div className="empty">ยังไม่มีไฟล์</div>)}
       </div>
     );
   };
@@ -239,6 +244,12 @@ export default function CaseForm({ formType }) {
             <h2>{formType === 'day0' ? 'ส่งรูปภาพตามขั้นตอน' : 'ส่งรูปภาพ'} <span className="req">*</span></h2>
             <p className="mu">ต้องเลือกอย่างน้อย 1 ไฟล์ก่อนบันทึกเคส · รูปจะถูกย่อให้อัตโนมัติ · รองรับวิดีโอ MP4/MOV</p>
             {photoErr && <p className="fe" role="alert">{photoErr}</p>}
+            {groups.length > 1 && (
+              <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+                <button type="button" className="btn s sm" onClick={() => setShut(new Set(groups.map((g) => g[0])))}>ย่อทั้งหมด</button>
+                <button type="button" className="btn s sm" onClick={() => setShut(new Set())}>ขยายทั้งหมด</button>
+              </div>
+            )}
             <div className="grid2">{groups.map(photoCard)}</div>
             {phase === 'retry' && (
               <div className="banner" style={{ marginTop: 12 }}>บันทึกข้อมูลเคสแล้ว แต่มี {failed} ไฟล์อัปโหลดไม่สำเร็จ
