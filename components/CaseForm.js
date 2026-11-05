@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Field from './Field.js';
 import { useMe, useToast, Denied, Spinner } from './Ctx.js';
-import { F, STEPS, GENDERS, ROUNDS, FORM_TITLES, PROC_DEP_KEYS, isShown, shownKeys, groupsFor, keysFor, labelOf, minDateFor, OPD_RE, OPD_ERR } from '../lib/fields.js';
+import { F, STEPS, GENDERS, ROUNDS, FORM_TITLES, depsToClear, isShown, shownKeys, groupsFor, keysFor, labelOf, minDateFor, OPD_RE, OPD_ERR } from '../lib/fields.js';
 import { api, useApi, today, bytes } from '../lib/client.js';
 
 const MAX_FILES = 30;
@@ -88,8 +88,8 @@ export default function CaseForm({ formType }) {
   if (!v) return <Spinner />;
   const set = (k, val) => {
     // เปลี่ยนประเภทหัตถการ → ล้างช่องย่อยของประเภทเดิม
-    setV((p) => ({ ...p, [k]: val, ...(k === 'procType' && val !== p.procType ? Object.fromEntries(PROC_DEP_KEYS.map((d) => [d, ''])) : {}) }));
-    setErrs((e) => (e[k] || (k === 'procType' && PROC_DEP_KEYS.some((d) => e[d])) ? { ...e, [k]: '', ...(k === 'procType' ? Object.fromEntries(PROC_DEP_KEYS.map((d) => [d, ''])) : {}) } : e));
+    setV((p) => ({ ...p, [k]: val, ...(k === 'procType' ? depsToClear(val) : {}) }));
+    setErrs((e) => (e[k] || k === 'procType' ? { ...e, [k]: '', ...(k === 'procType' ? Object.fromEntries(Object.keys(depsToClear(val)).map((d) => [d, ''])) : {}) } : e));
   };
   const patch = (id, p) => commit(filesRef.current.map((f) => (f.id === id ? { ...f, ...p } : f)));
   const busy = phase === 'busy';

@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import Field from './Field.js';
 import { useToast } from './Ctx.js';
-import { PROC_DEP_KEYS, isShown, keysFor } from '../lib/fields.js';
+import { depsToClear, isShown, keysFor } from '../lib/fields.js';
 import { api, useApi } from '../lib/client.js';
 
 // ผู้ดูแลระบบแก้ข้อมูลที่กรอกผิด (บันทึกใน audit ทุกครั้ง)
@@ -10,7 +10,7 @@ export default function RecordEditor({ record, onClose, onSaved }) {
   const toast = useToast();
   const { data } = useApi('/api/options?formType=' + record.formType);
   const [v, setV] = useState(() => ({ ...record })), [errs, setErrs] = useState({}), [busy, setBusy] = useState(false);
-  const set = (k, val) => { setV((p) => ({ ...p, [k]: val, ...(k === 'procType' && val !== p.procType ? Object.fromEntries(PROC_DEP_KEYS.map((d) => [d, ''])) : {}) })); setErrs((e) => ({ ...e, [k]: '' })); };
+  const set = (k, val) => { setV((p) => ({ ...p, [k]: val, ...(k === 'procType' ? depsToClear(val) : {}) })); setErrs((e) => ({ ...e, [k]: '' })); };
   async function save(e) {
     e.preventDefault(); setBusy(true);
     try { await api('/api/records/' + record.id, { method: 'PATCH', body: { data: v } }); toast('บันทึกการแก้ไขแล้ว'); onSaved(); }
