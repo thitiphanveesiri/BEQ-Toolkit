@@ -221,3 +221,12 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--dn)!import
 .up-item .vid{height:140px}
 .imgs:has(.up-item){grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr));align-items:start}
 @media(max-width:600px){.imgs:has(.up-item){grid-template-columns:repeat(2,1fr)}}
+
+/* ช่องเลือกหลายข้อแบบค้นหาได้ + ช่องที่ล็อก */
+.msel .msq{margin:6px 0}
+.mslist{max-height:210px;overflow:auto;border:1px solid var(--bd,#d8dee6);border-radius:10px;padding:4px;background:var(--card,#fff)}
+.mrow{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;margin:0;font-weight:400}
+.mrow:hover{background:rgba(0,0,0,.04)}
+.mrow input{width:18px;height:18px;margin:0;flex:none}
+.fld.lk input:not([type=radio]):not([type=checkbox]){background:rgba(0,0,0,.05);color:inherit;opacity:.85}
+.fld.lk .pill input:disabled+span{opacity:.6}

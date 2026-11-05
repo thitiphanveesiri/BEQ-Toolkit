@@ -72,7 +72,7 @@ export default function Patient() {
                     {r.note && <p className="mu">หมายเหตุ: {r.note}</p>}
                     <div className="row" style={{ gap: 8, marginTop: 8 }}>
                       {n > 0 && <button className="btn s sm" onClick={() => setTab('img')}>ดูรูป ({n})</button>}
-                      {perms.manage && <button className="btn s sm" onClick={() => setEdit(r)}>แก้ไข</button>}
+                      {perms.editData && <button className="btn s sm" onClick={() => setEdit(r)}>แก้ไข</button>}
                     </div>
                   </div>
                 )}

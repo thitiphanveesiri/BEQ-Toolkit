@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Field from './Field.js';
 import { useMe, useToast, Denied, Spinner } from './Ctx.js';
-import { F, STEPS, GENDERS, ROUNDS, FORM_TITLES, depsToClear, isShown, shownKeys, groupsFor, keysFor, labelOf, minDateFor, OPD_RE, OPD_ERR } from '../lib/fields.js';
+import { F, BASIC_LOCK, STEPS, GENDERS, ROUNDS, FORM_TITLES, depsToClear, isShown, shownKeys, groupsFor, keysFor, labelOf, minDateFor, OPD_RE, OPD_ERR } from '../lib/fields.js';
 import { api, useApi, today, bytes } from '../lib/client.js';
 
 const MAX_FILES = 30;
@@ -47,7 +47,8 @@ export default function CaseForm({ formType }) {
   const [v, setV] = useState(null), [errs, setErrs] = useState({}), [step, setStep] = useState(0);
   const [files, setFiles] = useState([]); // {id,group,file,url,kind,status,pct,error}
   const [phase, setPhase] = useState('edit'), [recordId, setRecordId] = useState(null), [photoErr, setPhotoErr] = useState('');
-  const filledFor = useRef(''), filesRef = useRef([]);
+  const filledFor = useRef(''), filesRef = useRef([]), wasLocked = useRef(false);
+  const [meta, setMeta] = useState(null), [locked, setLocked] = useState(() => new Set()); // meta: ประวัติของ HN ที่กรอก, locked: ช่องข้อมูลพื้นฐานที่ล็อกอยู่
   const [shut, setShut] = useState(() => new Set()); // กลุ่มรูปที่ย่อเก็บอยู่ (ตอนส่งรูป)
   const commit = (next) => { filesRef.current = next; setFiles(next); };
 
@@ -72,14 +73,27 @@ export default function CaseForm({ formType }) {
   // พิมพ์ OPD เดิม → เติมข้อมูลเดิมของคนไข้ให้ (ไม่แตะวันที่เข้ามา/ระยะตรวจ)
   useEffect(() => {
     const opd = v?.opd;
-    if (!opd || !OPD_RE.test(opd) || opd === filledFor.current) return;
+    if (opd === filledFor.current) return;
+    if (wasLocked.current) { // เปลี่ยน HN: ปลดล็อกและล้างข้อมูลพื้นฐานของคนไข้คนก่อน
+      wasLocked.current = false; filledFor.current = '';
+      setLocked(new Set()); setMeta(null);
+      setV((p) => ({ ...p, ...Object.fromEntries(BASIC_LOCK.map((k) => [k, k === 'gender' ? GENDERS[0] : ''])), round: ROUNDS[0] }));
+    }
+    if (!opd || !OPD_RE.test(opd)) return;
     const t = setTimeout(async () => {
       try {
-        const { data } = await api('/api/records/autofill?opd=' + encodeURIComponent(opd));
+        const { data, meta: m } = await api('/api/records/autofill?opd=' + encodeURIComponent(opd));
         filledFor.current = opd;
+        setMeta(m || null);
         // เติมเฉพาะช่องที่มีในฟอร์มนี้ และชื่อทีมงานที่ยังอยู่ในรายการของฟอร์มนี้
         const ok = ([k, val]) => keysFor(formType).includes(k) &&  (!/^t[A-Z]/.test(F[k].og || '') || opt?.[F[k].og]?.includes(val));
-        if (data) { setV((p) => ({ ...p, ...Object.fromEntries(Object.entries(data).filter(ok)) })); toast('เติมข้อมูลเดิมของ OPD นี้ให้แล้ว'); }
+        if (data) {
+          const fill = Object.entries(data).filter(ok).filter(([k]) => !(k === 'round' && formType === 'day0')); // Day 0: ให้ผู้กรอกเลือกครั้งที่เอง
+          setV((p) => ({ ...p, ...Object.fromEntries(fill) }));
+          const lk = new Set(BASIC_LOCK.filter((k) => keysFor(formType).includes(k) && String(data[k] || '').trim()));
+          wasLocked.current = lk.size > 0; setLocked(lk);
+          toast('เติมข้อมูลเดิมของ HN นี้ให้แล้ว' + (lk.size ? ' (ข้อมูลพื้นฐานล็อกไว้)' : ''));
+        }
       } catch {}
     }, 450);
     return () => clearTimeout(t);
@@ -94,6 +108,9 @@ export default function CaseForm({ formType }) {
   };
   const patch = (id, p) => commit(filesRef.current.map((f) => (f.id === id ? { ...f, ...p } : f)));
   const busy = phase === 'busy';
+  // ครั้งที่เข้ามารับหัตถการ: Day 0 แสดงเมื่อใส่ HN เดิม · BEQ Hair Center แสดงเมื่อมีหัตถการมากกว่า 1 รอบ · ไม่แสดง = ครั้งที่ 1
+  const showRound = formType === 'day0' ? !!meta : (meta?.maxRound || 1) > 1;
+  const roundNote = formType === 'day0' && meta?.day0Rounds?.includes(ROUNDS.indexOf(v.round) + 1) ? 'มี Day 0 ของรอบนี้อยู่แล้ว — บันทึกแล้วข้อมูลจะอัปเดตทับของเดิม และรูปใหม่จะเข้าชุดเดิม' : '';
 
   async function addFiles(group, list) {
     const have = filesRef.current.filter((f) => f.group === group).length;
@@ -162,7 +179,7 @@ export default function CaseForm({ formType }) {
       let rid = recordId;
       if (!rid) {
         const body = { formType, data: v };
-        try { rid = (await api('/api/records', { method: 'POST', body })).id; }
+        try { const res = await api('/api/records', { method: 'POST', body }); rid = res.id; if (res.updated) toast('อัปเดต Day 0 เดิมของ HN นี้แล้ว'); }
         catch (x) {
           if (x.status === 409 && confirm(x.message + '\nต้องการบันทึกซ้ำหรือไม่?')) rid = (await api('/api/records', { method: 'POST', body: { ...body, force: true } })).id;
           else throw x;
@@ -235,7 +252,7 @@ export default function CaseForm({ formType }) {
         {steps.map((s, i) => (
           <div className="card sec" data-s={i} key={s[0]}>
             <h2>{s[0]}</h2>
-            <div className="f2">{s[1].filter((k) => isShown(k, v)).map((k) => <Field key={k} k={k} formType={formType} minDate={minDateFor(k, formType, today())} value={v[k] ?? ''} onChange={set} options={opt} error={errs[k]} />)}</div>
+            <div className="f2">{s[1].filter((k) => isShown(k, v) && (k !== 'round' || showRound)).map((k) => <Field key={k} locked={locked.has(k)} note={k === 'round' ? roundNote : ''} k={k} formType={formType} minDate={minDateFor(k, formType, today())} value={v[k] ?? ''} onChange={set} options={opt} error={errs[k]} />)}</div>
             {i === steps.length - 1 && <><h3 style={{ margin: '16px 0 4px' }}>ข้อมูลเพิ่มเติม</h3><label htmlFor="f-note">หมายเหตุ</label><textarea id="f-note" rows={2} value={v.note} onChange={(e) => set('note', e.target.value)} maxLength={1000} /></>}
           </div>
         ))}

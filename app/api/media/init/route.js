@@ -14,7 +14,7 @@ const mb = (n) => n * 1024 * 1024;
 export const POST = route({ perm: 'upload' }, async ({ req, user, body }) => {
   const rec = (await listRecords()).find((r) => r.id === body?.recordId);
   if (!rec) throw new AppError(404, 'ไม่พบเคสที่จะแนบรูป');
-  if (user.role !== 'admin' && rec.createdBy !== user.id) throw new AppError(403, 'แนบรูปได้เฉพาะเคสที่คุณเป็นผู้กรอก');
+  // ผู้มีสิทธิ์อัปโหลดแนบรูปเข้าเคสได้ (รวมกรณีกรอก Day 0 ซ้ำเพื่ออัปเดตเคสเดิม)
   const group = String(body.group || '');
   if (!groupsFor(rec.formType).some((g) => g[0] === group)) throw new AppError(400, 'ช่องรูปภาพไม่ถูกต้อง');
   const mime = String(body.mime || '').toLowerCase(), size = Number(body.size);

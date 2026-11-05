@@ -1,10 +1,12 @@
 'use client';
 import { useState } from 'react';
+const BIG = 8; // รายการยาวกว่านี้ใช้ช่องเลือกแบบค้นหาได้
 import { F, OPD_LEN, PERIOD_RE, PERIOD_UNITS, PERIOD_QUICK, labelOf, splitMulti, MULTI_SEP } from '../lib/fields.js';
 
 // ช่องกรอกตามนิยามใน lib/fields.js (ใช้ทั้งฟอร์มส่งเคสและหน้าแก้ไขของผู้ดูแล)
-export default function Field({ k, value, onChange, options, error, idp = 'f', formType, minDate }) {
+export default function Field({ k, value, onChange, options, error, idp = 'f', formType, minDate, locked = false, note }) {
   const f = F[k], lbl = labelOf(k, formType);
+  const [q, setQ] = useState('');
   const [pu, setPu] = useState('เดือน'); // หน่วยที่เลือกของช่องระยะ (ใช้ตอนยังไม่ได้ใส่ตัวเลข)
   let list = f.o || (f.og ? options?.[f.og] || [] : null);
   const cur = f.t === 'multi' ? splitMulti(value) : [];
@@ -19,7 +21,7 @@ export default function Field({ k, value, onChange, options, error, idp = 'f', f
     input = (
       <>
         <div className="opdbox"><span className="opdpre" aria-hidden="true">HN-</span>
-          <input id={id} inputMode="numeric" autoComplete="off" maxLength={OPD_LEN} placeholder={`เลข ${OPD_LEN} หลัก`} value={digits} aria-invalid={!!error} aria-describedby={id + '-h'}
+          <input id={id} inputMode="numeric" autoComplete="off" disabled={locked} maxLength={OPD_LEN} placeholder={`เลข ${OPD_LEN} หลัก`} value={digits} aria-invalid={!!error} aria-describedby={id + '-h'}
             onChange={(e) => { const d = e.target.value.replace(/\D/g, '').slice(0, OPD_LEN); onChange(k, d ? 'HN-' + d : ''); }} />
         </div>
         <p id={id + '-h'} className="mu" style={{ margin: '3px 0 0', fontSize: 12 }}>กรอกตัวเลข {OPD_LEN} หลัก ({digits.length}/{OPD_LEN}) ระบบเก็บเป็น HN-{digits || 'x'.repeat(OPD_LEN)}</p>
@@ -29,7 +31,7 @@ export default function Field({ k, value, onChange, options, error, idp = 'f', f
     input = list.length ? (
       <div className="pills" role="radiogroup" aria-label={lbl}>
         {list.map((z) => (
-          <label className="pill" key={z}><input type="radio" name={id} value={z} checked={value === z} onChange={() => onChange(k, z)} /><span>{z}</span></label>
+          <label className="pill" key={z}><input type="radio" name={id} value={z} checked={value === z} disabled={locked} onChange={() => onChange(k, z)} /><span>{z}</span></label>
         ))}
       </div>
     ) : <p className="mu">{emptyMsg}</p>;
@@ -39,7 +41,24 @@ export default function Field({ k, value, onChange, options, error, idp = 'f', f
       const next = cur.includes(z) ? cur.filter((x) => x !== z) : [...cur, z];
       onChange(k, list.filter((x) => next.includes(x)).join(MULTI_SEP));
     };
-    input = list.length ? (
+    const big = list.length > BIG, shown = big && q.trim() ? list.filter((z) => z.toLowerCase().includes(q.trim().toLowerCase())) : list;
+    input = list.length && big ? (
+      <div className="msel">
+        {cur.length > 0 && (
+          <div className="pills" aria-label="ที่เลือกไว้">
+            {cur.map((z) => <button type="button" key={z} className="chip on" onClick={() => toggle(z)} title="กดเพื่อเอาออก">{z} ✕</button>)}
+            <button type="button" className="chip" onClick={() => onChange(k, '')}>ล้างทั้งหมด</button>
+          </div>
+        )}
+        <input type="search" className="msq" placeholder={`ค้นหา (ทั้งหมด ${list.length} รายการ)`} value={q} onChange={(e) => setQ(e.target.value)} aria-label={'ค้นหา' + lbl} />
+        <div className="mslist" role="group" aria-label={lbl} aria-invalid={!!error}>
+          {shown.length ? shown.map((z) => (
+            <label className="mrow" key={z}><input type="checkbox" value={z} checked={cur.includes(z)} onChange={() => toggle(z)} /><span>{z}</span></label>
+          )) : <p className="mu" style={{ margin: 6 }}>ไม่พบรายการที่ค้นหา</p>}
+        </div>
+        <p className="mu" style={{ margin: '3px 0 0', fontSize: 12 }}>เลือกได้หลายข้อ · เลือกแล้ว {cur.length} รายการ</p>
+      </div>
+    ) : list.length ? (
       <>
         <div className="pills" role="group" aria-label={lbl} aria-invalid={!!error}>
           {list.map((z) => (
@@ -78,17 +97,19 @@ export default function Field({ k, value, onChange, options, error, idp = 'f', f
   } else {
     input = (
       <>
-        <input id={id} type={f.t === 'date' ? 'date' : 'text'} min={f.t === 'date' && minDate ? minDate : undefined} value={value} onChange={(e) => onChange(k, f.num ? e.target.value.replace(/\D/g, '').slice(0, 3) : e.target.value)} inputMode={f.num ? 'numeric' : undefined} placeholder={f.ph} list={f.sug ? id + '-l' : undefined}
+        <input id={id} type={f.t === 'date' ? 'date' : 'text'} min={f.t === 'date' && minDate ? minDate : undefined} value={value} readOnly={locked} onChange={(e) => onChange(k, f.num ? e.target.value.replace(/\D/g, '').slice(0, 3) : e.target.value)} inputMode={f.num ? 'numeric' : undefined} placeholder={f.ph} list={f.sug ? id + '-l' : undefined}
           aria-invalid={!!error} autoComplete="off" autoCapitalize={k === 'opd' ? 'characters' : undefined} maxLength={120} />
         {f.sug && <datalist id={id + '-l'}>{f.sug.map((z) => <option key={z} value={z} />)}</datalist>}
       </>
     );
   }
   return (
-    <div className={'fld' + (f.req && !String(value || '').trim() ? ' need' : '')} style={['multi', 'pills', 'period'].includes(f.t) ? { gridColumn: '1 / -1' } : undefined}>
-      <label htmlFor={['pills', 'multi'].includes(f.t) ? undefined : id}>{lbl}{f.req ? <span className="req"> *</span> : <span className="opt"> (ไม่บังคับ)</span>}{f.hint ? <span className="hint"> · {f.hint}</span> : null}</label>
+    <div className={'fld' + (locked ? ' lk' : '') + (f.req && !String(value || '').trim() ? ' need' : '')} style={['multi', 'pills', 'period'].includes(f.t) ? { gridColumn: '1 / -1' } : undefined}>
+      <label htmlFor={['pills', 'multi'].includes(f.t) ? undefined : id}>{lbl}{f.req ? <span className="req"> *</span> : <span className="opt"> (ไม่บังคับ)</span>}{(f.hintBy?.[formType] || f.hint) ? <span className="hint"> · {f.hintBy?.[formType] || f.hint}</span> : null}</label>
       {input}
       {f.t === 'date' && minDate && <p className="mu" style={{ margin: '3px 0 0', fontSize: 12 }}>เลือกย้อนหลังได้ไม่เกิน 1 วัน (วันนี้และอนาคตเลือกได้)</p>}
+      {locked && <p className="mu" style={{ margin: '3px 0 0', fontSize: 12 }}>🔒 ข้อมูลเดิมของ HN นี้ — แก้ไขได้ที่หน้าข้อมูลคนไข้เท่านั้น</p>}
+      {note && <p className="mu" style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--ac, #0a7)' }}>{note}</p>}
       {error && <p className="fe" role="alert">{error}</p>}
     </div>
   );

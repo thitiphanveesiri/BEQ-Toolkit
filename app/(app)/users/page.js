@@ -4,7 +4,7 @@ import { useMe, useToast, Denied, Spinner } from '../../../components/Ctx.js';
 import { api, useApi } from '../../../lib/client.js';
 import { ROLES, OVERRIDABLE, can } from '../../../lib/roles.js';
 
-const PERM_LABELS = [['fillForm', 'กรอก/ส่งฟอร์ม'], ['upload', 'อัปโหลดรูป/วิดีโอ'], ['viewImages', 'ดูรูป/วิดีโอ'], ['viewStats', 'ดูรายงาน'], ['manage', 'จัดการระบบ']];
+const PERM_LABELS = [['fillForm', 'กรอก/ส่งฟอร์ม'], ['upload', 'อัปโหลดรูป/วิดีโอ'], ['viewImages', 'ดูรูป/วิดีโอ'], ['viewStats', 'ดูรายงาน'], ['editData', 'แก้ไขข้อมูลคนไข้'], ['manage', 'จัดการระบบ']];
 
 function Editor({ u, onClose, onSaved }) {
   const toast = useToast(), isNew = !u;
