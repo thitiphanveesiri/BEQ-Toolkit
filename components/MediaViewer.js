@@ -2,18 +2,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { D, bytes } from '../lib/client.js';
-import { groupLabel } from '../lib/fields.js';
+import { groupLabel, roundNo } from '../lib/fields.js';
 
 const GROUP_ORDER = ['front', 'left', 'right', 'single'];
 
 // จัดรูปเป็นลำดับ: Day 0 (ก่อน/หลังวาดเส้น/หลังปลูกทันที) → แต่ละระยะที่เข้ามาตรวจ ตามวันที่
 export function buildSections(records, media) {
   const rec = new Map(records.map((r) => [r.id, r]));
-  const secs = new Map();
+  const secs = new Map(), multi = records.some((r) => roundNo(r.round) > 1); // มีหลายรอบ → ใส่ "ครั้งที่ N" นำหน้าทุกหัวข้อ
   for (const m of media) {
     const r = rec.get(m.recordId); if (!r) continue;
-    const day0 = r.formType === 'day0', key = day0 ? 'd0|' + r.id : 'p|' + (r.visitPeriod || '-');
-    if (!secs.has(key)) secs.set(key, { key, day0, date: r.date, title: day0 ? `Day 0 · ${D(r.date)}` : `ระยะ ${r.visitPeriod || 'ไม่ระบุ'}`, groups: new Map() });
+    const n = roundNo(r.round), pre = multi ? `ครั้งที่ ${n} · ` : '';
+    const day0 = r.formType === 'day0', key = day0 ? 'd0|' + r.id : `p|${n}|` + (r.visitPeriod || '-');
+    if (!secs.has(key)) secs.set(key, { key, day0, round: n, date: r.date, title: day0 ? `${pre}Day 0 · ${D(r.date)}` : `${pre}ระยะ ${r.visitPeriod || 'ไม่ระบุ'}`, groups: new Map() });
     const s = secs.get(key); if (r.date < s.date) s.date = r.date;
     if (!s.groups.has(m.group)) s.groups.set(m.group, []);
     s.groups.get(m.group).push(m);
@@ -21,7 +22,7 @@ export function buildSections(records, media) {
   return [...secs.values()]
     .map((s) => ({ ...s, groups: [...s.groups.entries()].sort((a, b) => GROUP_ORDER.indexOf(a[0]) - GROUP_ORDER.indexOf(b[0])).map(([g, items]) => ({ key: s.key + '/' + g, g, label: groupLabel(g), items: items.sort((a, b) => a.name.localeCompare(b.name)) })) }))
     .map((s) => ({ ...s, count: s.groups.reduce((n, g) => n + g.items.length, 0) }))
-    .sort((a, b) => (a.day0 === b.day0 ? a.date.localeCompare(b.date) : a.day0 ? -1 : 1));
+    .sort((a, b) => a.round - b.round || (a.day0 === b.day0 ? a.date.localeCompare(b.date) : a.day0 ? -1 : 1));
 }
 
 function Thumb({ m, i, onOpen }) {

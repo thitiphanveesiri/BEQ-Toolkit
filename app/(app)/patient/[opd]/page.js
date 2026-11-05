@@ -6,18 +6,19 @@ import { useMe, Denied, Spinner } from '../../../../components/Ctx.js';
 import MediaViewer from '../../../../components/MediaViewer.js';
 import RecordEditor from '../../../../components/RecordEditor.js';
 import { useApi, D } from '../../../../lib/client.js';
-import { F, procLabel } from '../../../../lib/fields.js';
+import { F, procLabel, roundNo, labelOf } from '../../../../lib/fields.js';
 
 // ข้อมูลประจำตัวคนไข้ (ด้านบน) และข้อมูลของแต่ละครั้งที่ส่งฟอร์ม (ในแต่ละ dropdown)
-const SHOW = ['opd', 'name', 'gender', 'age', 'date', 'plantDate', 'nat', 'procType', 'area', 'hairMethod', 'tool', 'inj', 'ct', 'visitPeriod', 'cell', 'doc', 'ph', 'ck'];
-const REC_SHOW = ['date', 'plantDate', 'procType', 'area', 'hairMethod', 'tool', 'inj', 'ct', 'visitPeriod', 'cell', 'doc', 'ph', 'ck'];
-const label = (k) => (k === 'proc' ? 'หัตถการ' : F[k].l);
-const val = (k, v) => (F[k]?.t === 'date' ? D(v) : v);
-const Grid = ({ o, keys = SHOW }) => (
-  <div className="detail-grid">{keys.filter((k) => o[k] && o[k] !== '—').map((k) => <div key={k}><small>{label(k)}</small><b>{val(k, o[k])}</b></div>)}</div>
+const SHOW = ['opd', 'name', 'gender', 'age', 'nat', 'round', 'plant', 'uploaded', 'procType', 'area', 'hairMethod', 'tool', 'inj', 'ct', 'visitPeriod', 'cell', 'doc', 'ph', 'ck'];
+const REC_SHOW = ['date', 'plantDate', 'uploaded', 'round', 'procType', 'area', 'hairMethod', 'tool', 'inj', 'ct', 'visitPeriod', 'cell', 'doc', 'ph', 'ck'];
+const EXTRA = { proc: 'หัตถการ', plant: 'วันที่มาปลูก', uploaded: 'วันที่อัปโหลด' }; // ช่องที่คำนวณเอง ไม่ได้เก็บเป็นคอลัมน์
+const label = (k, ft) => EXTRA[k] || labelOf(k, ft);
+const val = (k, v) => (F[k]?.t === 'date' || k === 'plant' || k === 'uploaded' ? D(v) : v);
+const Grid = ({ o, keys = SHOW, ft }) => (
+  <div className="detail-grid">{keys.filter((k) => o[k] && o[k] !== '—').map((k) => <div key={k}><small>{label(k, ft)}</small><b>{val(k, o[k])}</b></div>)}</div>
 );
 // เรียง: Day 0 ก่อน แล้วตามวันที่ (เก่า → ใหม่) ให้ตรงกับหน้ารูปภาพ
-const order = (a, b) => (a.formType === b.formType ? (a.date || '').localeCompare(b.date || '') : a.formType === 'day0' ? -1 : 1);
+const order = (a, b) => roundNo(a.round) - roundNo(b.round) || (a.formType === b.formType ? (a.date || '').localeCompare(b.date || '') : a.formType === 'day0' ? -1 : 1);
 
 export default function Patient() {
   const { perms } = useMe();
@@ -30,6 +31,11 @@ export default function Patient() {
   const recs = [...p.records].sort(order);
   const isOpen = (id) => (open ? open.has(id) : id === recs[recs.length - 1]?.id); // ค่าเริ่มต้น: เปิดเฉพาะครั้งล่าสุด
   const toggle = (id) => setOpen((cur) => { const n = new Set(cur || [recs[recs.length - 1]?.id]); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const multi = recs.some((r) => roundNo(r.round) > 1), pre = (r) => (multi ? `ครั้งที่ ${roundNo(r.round)} · ` : '');
+  const day0s = recs.filter((r) => r.formType === 'day0'), lastDay0 = day0s[day0s.length - 1];
+  // วันที่อัปโหลด = วันที่ส่งฟอร์ม/รูปเข้าระบบ (ไม่ใช่วันที่มาปลูก)
+  const upAt = (r) => p.media.filter((m) => m.recordId === r.id).map((m) => m.at).sort()[0] || r.createdAt || '';
+  const summary = { ...p.info, round: lastDay0?.round || p.info.round, plant: lastDay0?.date || p.info.plantDate, uploaded: recs.map(upAt).sort().pop() };
   const procOf = (r) => (r.procType ? '' : procLabel(r) === '—' ? '' : procLabel(r));
   return (
     <>
@@ -43,7 +49,7 @@ export default function Patient() {
         <div className="card">
           <section className="acc" style={{ marginTop: 0 }}>
             <button className="acc-h" aria-expanded={sumOpen} onClick={() => setSumOpen(!sumOpen)}><span className="ch">▸</span><span>ข้อมูลล่าสุดของคนไข้</span><span className="sp2" /></button>
-            {sumOpen && <div className="acc-b"><Grid o={{ ...p.info, proc: undefined }} /></div>}
+            {sumOpen && <div className="acc-b"><Grid o={summary} /></div>}
           </section>
           <div className="row sp" style={{ marginTop: 18 }}>
             <h2 style={{ margin: 0 }}>ประวัติฟอร์มของ OPD นี้ ({recs.length})</h2>
@@ -57,12 +63,12 @@ export default function Patient() {
             return (
               <section className="acc" key={r.id}>
                 <button className="acc-h" aria-expanded={o} aria-controls={'r-' + r.id} onClick={() => toggle(r.id)}>
-                  <span className="ch">▸</span><span>{r.formType === 'day0' ? 'Day 0 ก่อนวาดเส้น' : r.visitPeriod || 'BEQ Hair Center'}</span>
+                  <span className="ch">▸</span><span>{pre(r)}{r.formType === 'day0' ? 'Day 0 ก่อนวาดเส้น' : r.visitPeriod || 'BEQ Hair Center'}</span>
                   <span className="mu" style={{ fontWeight: 400 }}>{D(r.date)}</span><span className="sp2" /><span className="tag">{n} ไฟล์</span>
                 </button>
                 {o && (
                   <div className="acc-b" id={'r-' + r.id}>
-                    <Grid o={{ ...r, proc: procOf(r) }} keys={['proc', ...REC_SHOW]} />
+                    <Grid o={{ ...r, proc: procOf(r), uploaded: upAt(r) }} keys={['proc', ...REC_SHOW]} ft={r.formType} />
                     {r.note && <p className="mu">หมายเหตุ: {r.note}</p>}
                     <div className="row" style={{ gap: 8, marginTop: 8 }}>
                       {n > 0 && <button className="btn s sm" onClick={() => setTab('img')}>ดูรูป ({n})</button>}

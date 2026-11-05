@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Field from './Field.js';
 import { useMe, useToast, Denied, Spinner } from './Ctx.js';
-import { F, STEPS, GENDERS, FORM_TITLES, PROC_DEP_KEYS, isShown, shownKeys, groupsFor, keysFor, OPD_RE, OPD_ERR } from '../lib/fields.js';
+import { F, STEPS, GENDERS, ROUNDS, FORM_TITLES, PROC_DEP_KEYS, isShown, shownKeys, groupsFor, keysFor, labelOf, minDateFor, OPD_RE, OPD_ERR } from '../lib/fields.js';
 import { api, useApi, today, bytes } from '../lib/client.js';
 
 const MAX_FILES = 30;
@@ -51,7 +51,7 @@ export default function CaseForm({ formType }) {
   const commit = (next) => { filesRef.current = next; setFiles(next); };
 
   const blank = useCallback((o) => {
-    const x = { note: '', date: today(), plantDate: today() };
+    const x = { note: '', date: today(), plantDate: today(), round: ROUNDS[0] };
     for (const k of keysFor(formType)) {
       const f = F[k];
       if (x[k] !== undefined) continue;
@@ -114,7 +114,8 @@ export default function CaseForm({ formType }) {
 
   function validate() {
     const e = {};
-    for (const k of shownKeys(formType, v)) { const f = F[k]; if (f.req && !String(v[k] || '').trim()) e[k] = ['select', 'multi', 'pills'].includes(f.t) ? `กรุณาเลือก${f.l}` : `กรุณากรอก${f.l}`; }
+    for (const k of shownKeys(formType, v)) { const f = F[k]; if (f.req && !String(v[k] || '').trim()) e[k] = ['select', 'multi', 'pills'].includes(f.t) ? `กรุณาเลือก${labelOf(k, formType)}` : `กรุณากรอก${labelOf(k, formType)}`; }
+    for (const k of shownKeys(formType, v)) { const min = minDateFor(k, formType, today()); if (!e[k] && min && v[k] < min) e[k] = `${labelOf(k, formType)}เลือกย้อนหลังได้ไม่เกิน 1 วัน`; }
     if (!e.opd && !OPD_RE.test(v.opd || '')) e.opd = OPD_ERR;
     setErrs(e);
     const bad = steps.findIndex((s) => s[1].some((k) => e[k]));
@@ -220,15 +221,16 @@ export default function CaseForm({ formType }) {
   };
 
   const failed = files.filter((f) => f.status === 'error').length;
+  const missing = shownKeys(formType, v).filter((k) => F[k].req && !String(v[k] || '').trim()).length; // จำนวนช่องบังคับที่ยังว่าง
   return (
     <>
       <div className="row sp"><h1>{FORM_TITLES[formType]}</h1><button className="btn s" onClick={() => router.push('/dashboard')} disabled={busy}>← ยกเลิก</button></div>
-      <div className="stp"><div className="bar"><i style={{ width: Math.round(((step + 1) * 100) / totalSteps) + '%' }} /></div><p className="mu">ขั้นตอน {step + 1}/{totalSteps} · {stepTitles[step]}</p></div>
+      <div className="stp"><div className="bar"><i style={{ width: Math.round(((step + 1) * 100) / totalSteps) + '%' }} /></div><p className="mu">ขั้นตอน {step + 1}/{totalSteps} · {stepTitles[step]}{missing > 0 && <span className="todo"> · ยังต้องกรอก {missing} ช่อง</span>}</p></div>
       <form id="nf" className={'s' + step} noValidate onSubmit={submit}>
         {steps.map((s, i) => (
           <div className="card sec" data-s={i} key={s[0]}>
             <h2>{s[0]}</h2>
-            <div className="f2">{s[1].filter((k) => isShown(k, v)).map((k) => <Field key={k} k={k} value={v[k] ?? ''} onChange={set} options={opt} error={errs[k]} />)}</div>
+            <div className="f2">{s[1].filter((k) => isShown(k, v)).map((k) => <Field key={k} k={k} formType={formType} minDate={minDateFor(k, formType, today())} value={v[k] ?? ''} onChange={set} options={opt} error={errs[k]} />)}</div>
             {i === steps.length - 1 && <><h3 style={{ margin: '16px 0 4px' }}>ข้อมูลเพิ่มเติม</h3><label htmlFor="f-note">หมายเหตุ</label><textarea id="f-note" rows={2} value={v.note} onChange={(e) => set('note', e.target.value)} maxLength={1000} /></>}
           </div>
         ))}

@@ -207,3 +207,17 @@ table .num{text-align:right}
 .lb-strip button[aria-current=true]{border-color:#9be7c8;opacity:1}
 .lb-strip img{width:100%;height:100%;object-fit:cover;display:block}
 .lb-hint{color:#ffffffb3;font-size:12px}
+
+/* ===== เน้นช่องที่ต้องกรอก / ช่องระยะ (ตัวเลข+หน่วย) / พรีวิวรูปเต็มสัดส่วนก่อนอัปโหลด ===== */
+.fld.need input:not([type=checkbox]):not([type=radio]),.fld.need select{border-color:var(--wn);box-shadow:0 0 0 3px color-mix(in srgb,var(--wn) 16%,transparent)}
+.fld.need .pills{outline:2px dashed var(--wn);outline-offset:4px;border-radius:12px}
+.fld .opt{color:var(--mu);font-weight:400;font-size:12px}.fld .hint{color:var(--mu);font-weight:400;font-size:12px}
+input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--dn)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--dn) 20%,transparent)!important}
+.fe{font-weight:600}
+.todo{color:var(--wn);font-weight:600}
+.period{display:grid;grid-template-columns:1fr 120px;gap:8px}
+.pills.quick{margin-top:8px}.chip{padding:6px 12px;border:1px solid var(--bd);border-radius:99px;background:var(--sf);color:var(--tx);font:inherit;font-size:13px;cursor:pointer;min-height:36px}.chip.on{background:var(--pr);color:var(--pt);border-color:var(--pr)}
+.up-item img{width:100%;height:auto;max-height:420px;object-fit:contain;background:var(--mt);border-radius:8px;border:1px solid var(--bd);display:block}
+.up-item .vid{height:140px}
+.imgs:has(.up-item){grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr));align-items:start}
+@media(max-width:600px){.imgs:has(.up-item){grid-template-columns:repeat(2,1fr)}}
