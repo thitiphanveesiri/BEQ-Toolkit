@@ -30,19 +30,21 @@ function Editor({ u, onClose, onSaved }) {
         {['doctor', 'doctor_lead'].includes(f.role) && <><label htmlFor="tt">คำนำหน้า (แสดงหน้าชื่อในรายการเลือกแพทย์)</label><select id="tt" value={f.title || DOC_TITLES[0]} onChange={(e) => set('title', e.target.value)}>{DOC_TITLES.map((t) => <option key={t} value={t}>{t}</option>)}</select></>}
         <label htmlFor="rl">บทบาท</label>
         <select id="rl" value={f.role} onChange={(e) => set('role', e.target.value)}>{Object.entries(ROLES).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
-        <div className="chips">{PERM_LABELS.map(([p, l]) => <span key={p} className={'tag ' + (can(who, p) ? 'o' : '')} style={{ opacity: can(who, p) ? 1 : 0.45 }}>{can(who, p) ? '✓' : '✕'} {l}</span>)}</div>
-        {f.role !== 'admin' && (
-          <>
-            <h3 style={{ margin: '16px 0 2px' }}>ปรับสิทธิ์เฉพาะบัญชีนี้</h3>
-            <p className="mu" style={{ margin: '0 0 4px', fontSize: 12 }}>ค่าเริ่มต้นเป็นไปตามบทบาท เลือก “อนุญาต/ไม่อนุญาต” เพื่อเปลี่ยนเฉพาะบัญชีนี้</p>
-            {OVERRIDABLE.map((p) => (
-              <div key={p}><label htmlFor={'ov-' + p}>{PERM_LABELS.find((x) => x[0] === p)[1]}</label>
-                <select id={'ov-' + p} value={f.ov[p]} onChange={(e) => setF((s) => ({ ...s, ov: { ...s.ov, [p]: e.target.value } }))}>
-                  <option value="">ตามบทบาท ({can(f.role, p) ? 'อนุญาต' : 'ไม่อนุญาต'})</option><option value="1">อนุญาต</option><option value="0">ไม่อนุญาต</option>
-                </select></div>
-            ))}
-          </>
-        )}
+        <h3 style={{ margin: '16px 0 2px' }}>สิทธิ์การใช้งาน</h3>
+        <p className="mu" style={{ margin: '0 0 6px', fontSize: 12 }}>ติ๊กเพื่ออนุญาต — ค่าเริ่มต้นตามบทบาท ถ้าติ๊กต่างจากบทบาทจะแสดงเป็น “ปรับเฉพาะบัญชีนี้”{f.role === 'admin' ? ' · ผู้ดูแลระบบมีสิทธิ์ทุกอย่างเสมอ' : ''}</p>
+        <div className="permlist">
+          {PERM_LABELS.map(([p, l]) => {
+            const fixed = f.role === 'admin' || !OVERRIDABLE.includes(p), base = can(f.role, p);
+            const on = fixed ? base : f.ov[p] === '1' ? true : f.ov[p] === '0' ? false : base;
+            const changed = !fixed && on !== base;
+            return (
+              <label key={p} className={'permcheck' + (changed ? ' chg' : '')} style={{ opacity: fixed ? 0.6 : 1 }}>
+                <input type="checkbox" checked={on} disabled={fixed} onChange={(e) => setF((s) => ({ ...s, ov: { ...s.ov, [p]: e.target.checked === base ? '' : e.target.checked ? '1' : '0' } }))} />
+                <span>{l}</span>{changed && <small className="tag w">ปรับเฉพาะบัญชีนี้</small>}{fixed && f.role !== 'admin' && <small className="mu">ตามบทบาท</small>}
+              </label>
+            );
+          })}
+        </div>
         <label htmlFor="pw">{isNew ? 'รหัสผ่าน (อย่างน้อย 8 ตัวอักษร)' : 'ตั้งรหัสผ่านใหม่ (เว้นว่างถ้าไม่เปลี่ยน)'}</label>
         <input id="pw" type="password" value={f.password} onChange={(e) => set('password', e.target.value)} minLength={8} required={isNew} autoComplete="new-password" />
         {!isNew && <label className="permcheck"><input type="checkbox" checked={f.active} onChange={(e) => set('active', e.target.checked)} /> เปิดใช้งานบัญชีนี้</label>}

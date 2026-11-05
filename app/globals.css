@@ -247,3 +247,5 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--dn)!import
 .fu-list{display:grid;gap:6px}
 .fu-item{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;padding:10px 12px;border-radius:10px;border:1px solid var(--bd);text-decoration:none;color:inherit}
 .fu-item:hover{background:var(--mt)}.fu-item.overdue{border-color:var(--dn)}
+
+.permlist{display:grid;gap:2px;margin-bottom:6px}.permlist .permcheck{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--bd);margin:0;cursor:pointer;min-height:44px}.permlist .permcheck input{width:20px;height:20px;margin:0;flex:none}.permlist .permcheck.chg{border-color:var(--wn);background:color-mix(in srgb,var(--wn) 10%,transparent)}
