@@ -1,7 +1,7 @@
 import { route, audit } from '../../../../lib/api.js';
 import { listUsers, updateUser } from '../../../../lib/db.js';
 import { hashPassword } from '../../../../lib/auth.js';
-import { ROLES, serializeOverrides } from '../../../../lib/roles.js';
+import { ROLES, serializeOverrides, cleanTitle } from '../../../../lib/roles.js';
 import { AppError } from '../../../../lib/errors.js';
 import { pub } from '../../../../lib/userview.js';
 
@@ -12,6 +12,7 @@ export const PATCH = route({ perm: 'manage' }, async ({ req, user, params, body 
   const next = { ...u };
   if (body.name !== undefined) { next.name = String(body.name).trim().slice(0, 80); if (!next.name) throw new AppError(400, 'กรุณากรอกชื่อ'); }
   if (body.role !== undefined) { if (!(body.role in ROLES)) throw new AppError(400, 'บทบาทไม่ถูกต้อง'); next.role = body.role; }
+  if (body.title !== undefined) next.title = cleanTitle(body.title);
   if (body.overrides !== undefined) next.perms = next.role === 'admin' ? '' : serializeOverrides(body.overrides);
   else if (next.role === 'admin') next.perms = '';
   if (body.active !== undefined) next.active = body.active ? 'TRUE' : 'FALSE';

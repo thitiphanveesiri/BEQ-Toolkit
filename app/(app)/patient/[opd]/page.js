@@ -63,7 +63,7 @@ export default function Patient() {
             return (
               <section className="acc" key={r.id}>
                 <button className="acc-h" aria-expanded={o} aria-controls={'r-' + r.id} onClick={() => toggle(r.id)}>
-                  <span className="ch">▸</span><span>{pre(r)}{r.formType === 'day0' ? 'Day 0 ก่อนวาดเส้น' : r.visitPeriod || 'BEQ Hair Center'}</span>
+                  <span className="ch">▸</span><span>{pre(r)}{r.formType === 'day0' ? 'คนไข้เข้ารับบริการ(DAY 0)' : r.visitPeriod || 'คนไข้ติดตามผลตามระยะ Follow-Up(F/U)'}</span>
                   <span className="mu" style={{ fontWeight: 400 }}>{D(r.date)}</span><span className="sp2" /><span className="tag">{n} ไฟล์</span>
                 </button>
                 {o && (

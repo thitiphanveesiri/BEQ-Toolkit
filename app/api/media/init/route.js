@@ -5,7 +5,7 @@ import { startUpload, safeName } from '../../../../lib/drive.js';
 import { groupsFor, groupLabel } from '../../../../lib/fields.js';
 import { AppError } from '../../../../lib/errors.js';
 
-const MAX_PER_GROUP = 30;
+const MAX_IMAGES = 50, MAX_VIDEOS = 10; // ต่อช่อง (แยกรูปภาพ/วิดีโอ)
 const IMG = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/heic': '.heic', 'image/heif': '.heif' };
 const VID = { 'video/mp4': '.mp4', 'video/quicktime': '.mov', 'video/webm': '.webm', 'video/x-m4v': '.m4v' };
 const mb = (n) => n * 1024 * 1024;
@@ -23,11 +23,12 @@ export const POST = route({ perm: 'upload' }, async ({ req, user, body }) => {
   const kind = IMG[mime] ? 'image' : 'video';
   const limit = mb(Number(kind === 'image' ? process.env.MAX_IMAGE_MB || 25 : process.env.MAX_VIDEO_MB || 1024));
   if (!(size > 0) || size > limit) throw new AppError(400, `ไฟล์ใหญ่เกินกำหนด (${kind === 'image' ? 'รูป' : 'วิดีโอ'}สูงสุด ${Math.round(limit / mb(1))} MB)`);
-  const have = (await listMedia()).filter((m) => m.recordId === rec.id && m.group === group && m.status === 'ready').length;
-  const seq = Math.max(0, Math.min(MAX_PER_GROUP, Number(body.seq) || 0));
-  if (have + seq >= MAX_PER_GROUP) throw new AppError(400, `ช่องนี้เต็มแล้ว (สูงสุด ${MAX_PER_GROUP} ไฟล์)`);
+  const max = kind === 'image' ? MAX_IMAGES : MAX_VIDEOS;
+  const have = (await listMedia()).filter((m) => m.recordId === rec.id && m.group === group && m.kind === kind && m.status === 'ready').length;
+  const seq = Math.max(0, Math.min(max, Number(body.seq) || 0));
+  if (have + seq >= max) throw new AppError(400, `ช่อง${kind === 'image' ? 'รูปภาพ' : 'วิดีโอ'}นี้เต็มแล้ว (สูงสุด ${max} ${kind === 'image' ? 'รูป' : 'คลิป'})`);
   // ตั้งชื่อไฟล์ตามกฎ: OPD-ชื่อ-วันที่-เครื่องมือ-ช่อง-ลำดับ
-  const fileName = [rec.opd, rec.name, rec.date, (rec.hairMethod || rec.tool || rec.inj || ''), groupLabel(group), String(have + seq + 1).padStart(2, '0')].filter(Boolean).map(safeName).join('-') + ext;
+  const fileName = [rec.opd, rec.name, rec.date, (rec.hairMethod || rec.tool || rec.inj || ''), groupLabel(group), kind === 'video' ? 'VDO' : '', String(have + seq + 1).padStart(2, '0')].filter(Boolean).map(safeName).join('-') + ext;
   const mediaId = uid('M-');
   const { driveId, uploadUrl } = await startUpload({ rec, group, fileName, mime, size, origin: req.headers.get('origin'), mediaId });
   const token = signToken({ u: user.id, id: mediaId, d: driveId, r: rec.id, o: rec.opd, g: group, k: kind, n: fileName, m: mime, s: size });

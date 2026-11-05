@@ -12,7 +12,7 @@ export default function Search() {
   if (!perms.viewImages) return <Denied />;
   return (
     <>
-      <div className="row sp"><h1>BEQ Hair Center / ค้นหาคนไข้</h1></div>
+      <div className="row sp"><h1>ค้นหาคนไข้</h1></div>
       <div className="card">
         <div className="sk">
           <label htmlFor="q" className="mu" style={{ position: 'absolute', left: -9999 }}>ค้นหา</label>

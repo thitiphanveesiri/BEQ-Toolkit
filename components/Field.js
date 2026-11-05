@@ -9,6 +9,7 @@ export default function Field({ k, value, onChange, options, error, idp = 'f', f
   const [q, setQ] = useState('');
   const [pu, setPu] = useState('เดือน'); // หน่วยที่เลือกของช่องระยะ (ใช้ตอนยังไม่ได้ใส่ตัวเลข)
   let list = f.o || (f.og ? options?.[f.og] || [] : null);
+  if (list && k === 'hairMethod') list = [...list].sort((a, b) => (a === 'อื่น ๆ') - (b === 'อื่น ๆ') || a.localeCompare(b, 'en', { sensitivity: 'base' })); // เรียงตามตัวอักษร (อื่น ๆ ไว้ท้าย)
   const cur = f.t === 'multi' ? splitMulti(value) : [];
   // ค่าเดิมที่ไม่อยู่ในรายการแล้ว (ข้อมูลเก่า/ผู้ใช้ที่ถูกปิด) ยังแสดงให้เห็นเพื่อไม่ให้ข้อมูลหาย
   if (list && f.t === 'select' && value && !list.includes(value)) list = [value, ...list];
@@ -105,9 +106,10 @@ export default function Field({ k, value, onChange, options, error, idp = 'f', f
   }
   return (
     <div className={'fld' + (locked ? ' lk' : '') + (f.req && !String(value || '').trim() ? ' need' : '')} style={['multi', 'pills', 'period'].includes(f.t) ? { gridColumn: '1 / -1' } : undefined}>
-      <label htmlFor={['pills', 'multi'].includes(f.t) ? undefined : id}>{lbl}{f.req ? <span className="req"> *</span> : <span className="opt"> (ไม่บังคับ)</span>}{(f.hintBy?.[formType] || f.hint) ? <span className="hint"> · {f.hintBy?.[formType] || f.hint}</span> : null}</label>
+      <label htmlFor={['pills', 'multi'].includes(f.t) ? undefined : id}>{lbl}{f.req ? <span className="req"> *</span> : <span className="opt"> (ไม่บังคับ)</span>}</label>
       {input}
       {f.t === 'date' && minDate && <p className="mu" style={{ margin: '3px 0 0', fontSize: 12 }}>เลือกย้อนหลังได้ไม่เกิน 1 วัน (วันนี้และอนาคตเลือกได้)</p>}
+      {(f.hintBy?.[formType] || f.hint) && <p className="mu" style={{ margin: '3px 0 0', fontSize: 12 }}>{f.hintBy?.[formType] || f.hint}</p>}
       {locked && <p className="mu" style={{ margin: '3px 0 0', fontSize: 12 }}>🔒 ข้อมูลเดิมของ HN นี้ — แก้ไขได้ที่หน้าข้อมูลคนไข้เท่านั้น</p>}
       {note && <p className="mu" style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--ac, #0a7)' }}>{note}</p>}
       {error && <p className="fe" role="alert">{error}</p>}

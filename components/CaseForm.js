@@ -6,7 +6,7 @@ import { useMe, useToast, Denied, Spinner } from './Ctx.js';
 import { F, BASIC_LOCK, STEPS, GENDERS, ROUNDS, FORM_TITLES, depsToClear, isShown, shownKeys, groupsFor, keysFor, labelOf, minDateFor, OPD_RE, OPD_ERR } from '../lib/fields.js';
 import { api, useApi, today, bytes } from '../lib/client.js';
 
-const MAX_FILES = 30;
+const MAX_IMG = 50, MAX_VID = 10; // ต่อช่อง: รูปภาพ 50 รูป, วิดีโอ 10 คลิป (แยกช่องส่งกัน)
 const VIDEO_EXT = { mp4: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm', m4v: 'video/x-m4v' };
 const IMG_EXT = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', heic: 'image/heic', heif: 'image/heif' };
 let seqId = 0;
@@ -40,7 +40,7 @@ function putFile(url, file, onPct) {
 }
 
 export default function CaseForm({ formType }) {
-  const { perms } = useMe(), toast = useToast(), router = useRouter();
+  const { perms, user } = useMe(), toast = useToast(), router = useRouter();
   const { data: od } = useApi('/api/options?formType=' + formType), opt = od?.options;
   const steps = STEPS[formType], canUpload = perms.upload, groups = groupsFor(formType);
   const imageStep = steps.length, totalSteps = steps.length + (canUpload ? 1 : 0);
@@ -62,7 +62,25 @@ export default function CaseForm({ formType }) {
     x.gender = x.gender || GENDERS[0];
     return x;
   }, [formType]);
-  useEffect(() => { if (opt && !v) setV(blank(opt)); }, [opt, v, blank]);
+  // ร่างอัตโนมัติ: เก็บข้อมูลที่กรอกค้างไว้ในเครื่องนี้ (เผลอสลับเมนู/ปิดหน้า/รีเฟรชแล้วข้อมูลไม่หาย) — รูป/วิดีโอต้องเลือกใหม่
+  const draftKey = `beq-draft:${user?.id || 'u'}:${formType}`;
+  const dirty = useRef(false);
+  const [restored, setRestored] = useState('');
+  const readDraft = () => { try { return JSON.parse(localStorage.getItem(draftKey) || 'null'); } catch { return null; } };
+  const dropDraft = () => { try { localStorage.removeItem(draftKey); } catch {} };
+  useEffect(() => {
+    if (!opt || v) return;
+    const base = blank(opt), d = readDraft();
+    if (d?.v?.opd !== undefined || d?.v?.fname !== undefined) {
+      setV({ ...base, ...d.v }); setStep(Math.min(d.step || 0, totalSteps - 1)); dirty.current = true;
+      setRestored(new Date(d.at).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }));
+    } else setV(base);
+  }, [opt, v, blank]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!v || phase !== 'edit' || !dirty.current) return;
+    const t = setTimeout(() => { try { localStorage.setItem(draftKey, JSON.stringify({ v, step, at: Date.now() })); } catch {} }, 400);
+    return () => clearTimeout(t);
+  }, [v, step, phase]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => filesRef.current.forEach((f) => f.url && URL.revokeObjectURL(f.url)), []);
   useEffect(() => {
     if (phase !== 'busy') return;
@@ -103,6 +121,7 @@ export default function CaseForm({ formType }) {
   if (!v) return <Spinner />;
   const set = (k, val) => {
     // เปลี่ยนประเภทหัตถการ → ล้างช่องย่อยของประเภทเดิม
+    dirty.current = true;
     setV((p) => ({ ...p, [k]: val, ...(k === 'procType' ? depsToClear(val) : {}) }));
     setErrs((e) => (e[k] || k === 'procType' ? { ...e, [k]: '', ...(k === 'procType' ? Object.fromEntries(Object.keys(depsToClear(val)).map((d) => [d, ''])) : {}) } : e));
   };
@@ -112,12 +131,13 @@ export default function CaseForm({ formType }) {
   const showRound = formType === 'day0' ? !!meta : (meta?.maxRound || 1) > 1;
   const roundNote = formType === 'day0' && meta?.day0Rounds?.includes(ROUNDS.indexOf(v.round) + 1) ? 'มี Day 0 ของรอบนี้อยู่แล้ว — บันทึกแล้วข้อมูลจะอัปเดตทับของเดิม และรูปใหม่จะเข้าชุดเดิม' : '';
 
-  async function addFiles(group, list) {
-    const have = filesRef.current.filter((f) => f.group === group).length;
-    const room = MAX_FILES - have;
-    if (room <= 0) return toast(`ช่องนี้เลือกครบ ${MAX_FILES} ไฟล์แล้ว`);
+  async function addFiles(group, want, list) {
+    const MAX = want === 'image' ? MAX_IMG : MAX_VID, unit = want === 'image' ? 'รูป' : 'คลิป';
+    const have = filesRef.current.filter((f) => f.group === group && f.kind === want).length;
+    const room = MAX - have;
+    if (room <= 0) return toast(`ช่องนี้เลือกครบ ${MAX} ${unit}แล้ว`);
     const picked = [...list];
-    if (picked.length > room) toast(`เพิ่มได้อีก ${room} ไฟล์ (จำกัด ${MAX_FILES} ไฟล์ต่อช่อง)`);
+    if (picked.length > room) toast(`เพิ่มได้อีก ${room} ${unit} (จำกัด ${MAX} ${unit}ต่อช่อง)`);
     // ย่อรูปพร้อมกันหลายไฟล์ (ทีละ 4) แทนทีละรูป — เลือกรูปเยอะๆ แล้วพร้อมส่งเร็วขึ้นมาก
     const list2 = picked.slice(0, room), res = new Array(list2.length); let n = 0;
     const one = async () => {
@@ -125,6 +145,7 @@ export default function CaseForm({ formType }) {
         const i = n++, f = list2[i];
         const ext = f.name.split('.').pop().toLowerCase();
         const type = f.type || VIDEO_EXT[ext] || IMG_EXT[ext] || '';
+        if (!type.startsWith(want + '/')) { toast(`ช่องนี้รับเฉพาะ${want === 'image' ? 'รูปภาพ' : 'วิดีโอ'} — ข้าม ${f.name}`); continue; }
         if (type.startsWith('image/')) { const s = await shrink(f.type ? f : new File([f], f.name, { type })); res[i] = { id: ++seqId, group, file: s, kind: 'image', url: URL.createObjectURL(s), status: 'queued', pct: 0 }; }
         else if (type.startsWith('video/')) { const vf = f.type ? f : new File([f], f.name, { type }); res[i] = { id: ++seqId, group, file: vf, kind: 'video', url: URL.createObjectURL(vf), status: 'queued', pct: 0 }; }
         else toast(`ไม่รองรับไฟล์ ${f.name}`);
@@ -150,7 +171,7 @@ export default function CaseForm({ formType }) {
 
   async function runUploads(rid) {
     const todo = filesRef.current.filter((f) => f.status !== 'saved');
-    const perGroup = {}; const queue = todo.map((f) => ({ f, seq: (perGroup[f.group] = (perGroup[f.group] ?? -1) + 1) }));
+    const perGroup = {}; const queue = todo.map((f) => ({ f, seq: (perGroup[f.group + f.kind] = (perGroup[f.group + f.kind] ?? -1) + 1) })); // ลำดับนับแยกรูป/วิดีโอ
     const worker = async () => {
       while (queue.length) {
         const { f, seq } = queue.shift();
@@ -190,7 +211,7 @@ export default function CaseForm({ formType }) {
           if (x.status === 409 && confirm(x.message + '\nต้องการบันทึกซ้ำหรือไม่?')) rid = (await api('/api/records', { method: 'POST', body: { ...body, force: true } })).id;
           else throw x;
         }
-        setRecordId(rid);
+        setRecordId(rid); dropDraft(); dirty.current = false; setRestored('');
       }
       if (canUpload && filesRef.current.length) {
         toast('กำลังอัปโหลดรูป/วิดีโอ...');
@@ -205,7 +226,8 @@ export default function CaseForm({ formType }) {
     const ok = await runUploads(recordId);
     setPhase(ok ? 'done' : 'retry'); if (!ok) toast('ยังมีไฟล์ที่อัปโหลดไม่สำเร็จ');
   }
-  function reset() { files.forEach((f) => f.url && URL.revokeObjectURL(f.url)); commit([]); setV(blank(opt)); setErrs({}); setStep(0); setRecordId(null); filledFor.current = ''; setPhase('edit'); window.scrollTo(0, 0); }
+  function startOver() { dropDraft(); dirty.current = false; setRestored(''); setV(blank(opt)); setErrs({}); setStep(0); setLocked(new Set()); setMeta(null); filledFor.current = ''; toast('ล้างข้อมูลที่กรอกแล้ว'); }
+  function reset() { dropDraft(); dirty.current = false; setRestored(''); files.forEach((f) => f.url && URL.revokeObjectURL(f.url)); commit([]); setV(blank(opt)); setErrs({}); setStep(0); setRecordId(null); filledFor.current = ''; setPhase('edit'); window.scrollTo(0, 0); }
   const go = (d) => { setStep((s) => Math.max(0, Math.min(totalSteps - 1, s + d))); window.scrollTo(0, 0); };
   const stepTitles = [...steps.map((s) => s[0]), ...(canUpload ? ['รูปภาพ'] : [])];
 
@@ -217,6 +239,32 @@ export default function CaseForm({ formType }) {
     </div>
   );
 
+  const fileItems = (items) => (
+    <div className="imgs">
+      {items.map((f) => (
+        <figure key={f.id} className={'up-item ' + (f.status === 'error' ? 'err' : f.status === 'saved' ? 'ok' : '')}>
+          {f.kind === 'image' ? <img src={f.url} alt={f.file.name} /> : <video src={f.url + '#t=0.1'} controls playsInline preload="metadata" aria-label={f.file.name} />}
+          <figcaption>{f.file.name.length > 22 ? f.file.name.slice(0, 20) + '…' : f.file.name} · {bytes(f.file.size)}</figcaption>
+          {(f.status === 'uploading' || f.status === 'uploaded') && <div className="bar"><i style={{ width: f.pct + '%' }} /></div>}
+          <div className="st">{{ queued: '', uploading: `กำลังอัปโหลด ${f.pct}%`, uploaded: 'กำลังบันทึก...', saved: '✓ เรียบร้อย', error: f.error }[f.status]}</div>
+          {phase === 'edit' && <button type="button" className="btn d sm photo-remove" onClick={() => remove(f.id)} aria-label={'ลบ ' + f.file.name}>ลบ</button>}
+        </figure>
+      ))}
+    </div>
+  );
+  // ช่องส่งแยกกัน: รูปภาพ (สูงสุด 50) และวิดีโอ (สูงสุด 10) ในแต่ละกลุ่ม
+  const slot = (g, kind) => {
+    const items = files.filter((f) => f.group === g[0] && f.kind === kind), max = kind === 'image' ? MAX_IMG : MAX_VID;
+    return (
+      <div className="slot" key={kind}>
+        <div className="row sp" style={{ margin: '8px 0 4px' }}>
+          <b>{kind === 'image' ? '🖼️ รูปภาพ' : '🎬 วิดีโอ'} <span className="mu" style={{ fontWeight: 400 }}>{items.length}/{max} {kind === 'image' ? 'รูป' : 'คลิป'}</span></b>
+          {phase === 'edit' && <label className="btn s">{kind === 'image' ? 'เลือกรูปภาพ' : 'เลือกวิดีโอ'}<input type="file" accept={kind === 'image' ? 'image/*' : 'video/*'} multiple hidden onChange={(e) => { addFiles(g[0], kind, e.target.files); e.target.value = ''; }} /></label>}
+        </div>
+        {items.length ? fileItems(items) : <div className="empty">{kind === 'image' ? 'ยังไม่มีรูปภาพ' : 'ยังไม่มีวิดีโอ'}</div>}
+      </div>
+    );
+  };
   const photoCard = (g) => {
     const items = files.filter((f) => f.group === g[0]), isShut = shut.has(g[0]);
     const done = items.filter((f) => f.status === 'saved').length, bad = items.filter((f) => f.status === 'error').length;
@@ -224,26 +272,9 @@ export default function CaseForm({ formType }) {
       <div className="card acc-card" key={g[0]}>
         <button type="button" className="acc-h" style={{ padding: '4px 2px', minHeight: 44 }} aria-expanded={!isShut} onClick={() => setShut((s) => { const n = new Set(s); n.has(g[0]) ? n.delete(g[0]) : n.add(g[0]); return n; })}>
           <span className="ch">▸</span><span>{g[1]}</span><span className="sp2" />
-          <span className="tag">{items.length}/{MAX_FILES} ไฟล์{done ? ` · ✓${done}` : ''}{bad ? ` · ⚠${bad}` : ''}</span>
+          <span className="tag">{items.length} ไฟล์{done ? ` · ✓${done}` : ''}{bad ? ` · ⚠${bad}` : ''}</span>
         </button>
-        {!isShut && phase === 'edit' && (
-          <div className="row" style={{ margin: '8px 0' }}>
-            <label className="btn s">🖼️ เลือกไฟล์<input type="file" accept="image/*,video/*" multiple hidden onChange={(e) => { addFiles(g[0], e.target.files); e.target.value = ''; }} /></label>
-          </div>
-        )}
-        {!isShut && (items.length ? (
-          <div className="imgs">
-            {items.map((f) => (
-              <figure key={f.id} className={'up-item ' + (f.status === 'error' ? 'err' : f.status === 'saved' ? 'ok' : '')}>
-                {f.kind === 'image' ? <img src={f.url} alt={f.file.name} /> : <video src={f.url + '#t=0.1'} controls playsInline preload="metadata" aria-label={f.file.name} />}
-                <figcaption>{f.file.name.length > 22 ? f.file.name.slice(0, 20) + '…' : f.file.name} · {bytes(f.file.size)}</figcaption>
-                {(f.status === 'uploading' || f.status === 'uploaded') && <div className="bar"><i style={{ width: f.pct + '%' }} /></div>}
-                <div className="st">{{ queued: '', uploading: `กำลังอัปโหลด ${f.pct}%`, uploaded: 'กำลังบันทึก...', saved: '✓ เรียบร้อย', error: f.error }[f.status]}</div>
-                {phase === 'edit' && <button type="button" className="btn d sm photo-remove" onClick={() => remove(f.id)} aria-label={'ลบ ' + f.file.name}>ลบ</button>}
-              </figure>
-            ))}
-          </div>
-        ) : <div className="empty">ยังไม่มีไฟล์</div>)}
+        {!isShut && ['image', 'video'].map((k) => slot(g, k))}
       </div>
     );
   };
@@ -254,6 +285,8 @@ export default function CaseForm({ formType }) {
     <>
       <div className="row sp"><h1>{FORM_TITLES[formType]}</h1><button className="btn s" onClick={() => router.push('/dashboard')} disabled={busy}>← ยกเลิก</button></div>
       <div className="stp"><div className="bar"><i style={{ width: Math.round(((step + 1) * 100) / totalSteps) + '%' }} /></div><p className="mu">ขั้นตอน {step + 1}/{totalSteps} · {stepTitles[step]}{missing > 0 && <span className="todo"> · ยังต้องกรอก {missing} ช่อง</span>}</p></div>
+      {phase === 'edit' && restored && <div className="banner" role="status" style={{ margin: '0 0 10px' }}>กู้คืนข้อมูลที่กรอกค้างไว้เมื่อ {restored} — รูป/วิดีโอต้องเลือกใหม่ <button type="button" className="btn s sm" style={{ marginLeft: 8 }} onClick={startOver}>ล้างและเริ่มใหม่</button></div>}
+      {phase === 'edit' && !restored && <p className="mu" style={{ fontSize: 12, margin: '0 0 8px' }}>💾 ข้อมูลที่กรอกจะถูกบันทึกเป็นร่างอัตโนมัติในเครื่องนี้ (รูป/วิดีโอไม่ถูกเก็บ)</p>}
       <form id="nf" className={'s' + step} noValidate onSubmit={submit}>
         {steps.map((s, i) => (
           <div className="card sec" data-s={i} key={s[0]}>

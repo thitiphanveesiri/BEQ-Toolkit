@@ -2,13 +2,13 @@
 import { useState } from 'react';
 import { useMe, useToast, Denied, Spinner } from '../../../components/Ctx.js';
 import { api, useApi } from '../../../lib/client.js';
-import { ROLES, OVERRIDABLE, can } from '../../../lib/roles.js';
+import { ROLES, OVERRIDABLE, DOC_TITLES, can } from '../../../lib/roles.js';
 
 const PERM_LABELS = [['fillForm', 'กรอก/ส่งฟอร์ม'], ['upload', 'อัปโหลดรูป/วิดีโอ'], ['viewImages', 'ดูรูป/วิดีโอ'], ['viewStats', 'ดูรายงาน'], ['editData', 'แก้ไขข้อมูลคนไข้'], ['manage', 'จัดการระบบ']];
 
 function Editor({ u, onClose, onSaved }) {
   const toast = useToast(), isNew = !u;
-  const [f, setF] = useState({ username: '', name: u?.name || '', role: u?.role || 'bt', active: u ? u.active : true, password: '', ov: Object.fromEntries(OVERRIDABLE.map((p) => [p, u?.overrides?.[p] === true ? '1' : u?.overrides?.[p] === false ? '0' : ''])) });
+  const [f, setF] = useState({ username: '', name: u?.name || '', title: u?.title || '', role: u?.role || 'bt', active: u ? u.active : true, password: '', ov: Object.fromEntries(OVERRIDABLE.map((p) => [p, u?.overrides?.[p] === true ? '1' : u?.overrides?.[p] === false ? '0' : ''])) });
   const overrides = Object.fromEntries(OVERRIDABLE.filter((p) => f.ov[p]).map((p) => [p, f.ov[p] === '1']));
   const who = { role: f.role, perms: Object.entries(overrides).map(([k, v]) => `${k}:${v ? 1 : 0}`).join(',') }; // บทบาท + สิทธิ์รายบัญชีที่เลือกอยู่
   const [busy, setBusy] = useState(false);
@@ -17,7 +17,7 @@ function Editor({ u, onClose, onSaved }) {
     e.preventDefault(); setBusy(true);
     try {
       if (isNew) await api('/api/users', { method: 'POST', body: { ...f, overrides } });
-      else await api('/api/users/' + u.id, { method: 'PATCH', body: { name: f.name, role: f.role, active: f.active, overrides, ...(f.password ? { password: f.password } : {}) } });
+      else await api('/api/users/' + u.id, { method: 'PATCH', body: { name: f.name, title: f.title, role: f.role, active: f.active, overrides, ...(f.password ? { password: f.password } : {}) } });
       toast('บันทึกผู้ใช้แล้ว'); onSaved();
     } catch (x) { toast('❌ ' + x.message); setBusy(false); }
   }
@@ -27,6 +27,7 @@ function Editor({ u, onClose, onSaved }) {
         <h2>{isNew ? 'เพิ่มผู้ใช้' : 'แก้ไขผู้ใช้ · ' + u.username}</h2>
         {isNew && <><label htmlFor="un">Username</label><input id="un" value={f.username} onChange={(e) => set('username', e.target.value)} required autoCapitalize="none" autoComplete="off" pattern="[A-Za-z0-9._\-]{3,32}" title="a-z 0-9 . _ - ความยาว 3–32 ตัว" /></>}
         <label htmlFor="nm">ชื่อที่แสดง</label><input id="nm" value={f.name} onChange={(e) => set('name', e.target.value)} required maxLength={80} />
+        {['doctor', 'doctor_lead'].includes(f.role) && <><label htmlFor="tt">คำนำหน้า (แสดงหน้าชื่อในรายการเลือกแพทย์)</label><select id="tt" value={f.title || DOC_TITLES[0]} onChange={(e) => set('title', e.target.value)}>{DOC_TITLES.map((t) => <option key={t} value={t}>{t}</option>)}</select></>}
         <label htmlFor="rl">บทบาท</label>
         <select id="rl" value={f.role} onChange={(e) => set('role', e.target.value)}>{Object.entries(ROLES).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
         <div className="chips">{PERM_LABELS.map(([p, l]) => <span key={p} className={'tag ' + (can(who, p) ? 'o' : '')} style={{ opacity: can(who, p) ? 1 : 0.45 }}>{can(who, p) ? '✓' : '✕'} {l}</span>)}</div>
