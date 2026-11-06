@@ -7,20 +7,41 @@ import { F, isReq, fmtOpd, BASIC_LOCK, STEPS, GENDERS, ROUNDS, FORM_TITLES, deps
 import { api, useApi, today, bytes } from '../lib/client.js';
 
 const MAX_IMG = 50, MAX_VID = 10; // ต่อช่อง: รูปภาพ 50 รูป, วิดีโอ 10 คลิป (แยกช่องส่งกัน)
-const VIDEO_EXT = { mp4: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm', m4v: 'video/x-m4v' };
-const IMG_EXT = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', heic: 'image/heic', heif: 'image/heif' };
+import { classify, ACCEPT_IMG, ACCEPT_VID } from '../lib/mediatypes.js';
 let seqId = 0;
 
-// ย่อรูปก่อนอัปโหลด (ด้านยาวสุด 1600px, JPEG 85%) ให้ส่งเร็วและประหยัดพื้นที่ — ถ้าย่อไม่ได้ (เช่น HEIC) ส่งไฟล์เดิม
+// ตัวอย่างไฟล์ก่อนส่ง: ถ้าเบราว์เซอร์แสดงชนิดไฟล์นี้ไม่ได้ จะขึ้นข้อความแทนภาพว่าง (ไฟล์ยังส่งได้ตามปกติ)
+function Pv({ f }) {
+  const [bad, setBad] = useState(false);
+  if (bad) return <div className="empty" style={{ padding: 12, fontSize: 12 }}>{f.kind === 'video' ? '🎬' : '🖼️'} ดูตัวอย่างในเบราว์เซอร์นี้ไม่ได้ — ยังส่งไฟล์ได้ตามปกติ</div>;
+  return f.kind === 'image' ? <img src={f.url} alt={f.file.name} onError={() => setBad(true)} /> : <video src={f.url + '#t=0.1'} controls playsInline preload="metadata" aria-label={f.file.name} onError={() => setBad(true)} />;
+}
+
+// เตรียมรูปก่อนอัปโหลดให้ "ทุกเบราว์เซอร์เปิดดูได้": ย่อด้านยาวสุด 1600px แล้วแปลงเป็น JPEG 85%
+// HEIC/HEIF (จาก iPhone) ที่เบราว์เซอร์ถอดรหัสเองไม่ได้ (เช่น Chrome/Firefox) จะแปลงด้วยไลบรารีก่อน
+// ถ้าแปลงไม่ได้ (เช่น TIFF/RAW บางชนิด) หรือเป็น GIF เคลื่อนไหว จะส่งไฟล์ต้นฉบับ — ยังเก็บและดาวน์โหลดได้
 async function shrink(f) {
+  if (f.type === 'image/gif') return f;
+  const name = f.name.replace(/\.[^.]+$/, '') + '.jpg';
+  let src = f, bmp = null;
+  try { bmp = await createImageBitmap(src); }
+  catch {
+    if (!/heic|heif/i.test(f.type) && !/\.(heic|heif|hif)$/i.test(f.name)) return f;
+    try {
+      const { default: heic2any } = await import('heic2any');
+      const out = await heic2any({ blob: f, toType: 'image/jpeg', quality: 0.85 });
+      src = new File([Array.isArray(out) ? out[0] : out], name, { type: 'image/jpeg' });
+      bmp = await createImageBitmap(src);
+    } catch { return f; }
+  }
   try {
-    const b = await createImageBitmap(f), k = Math.min(1, 1600 / Math.max(b.width, b.height));
-    if (k === 1 && f.size < 1.5 * 1048576 && f.type === 'image/jpeg') return f;
-    const c = document.createElement('canvas'); c.width = Math.round(b.width * k); c.height = Math.round(b.height * k);
-    c.getContext('2d').drawImage(b, 0, 0, c.width, c.height);
+    const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+    if (k === 1 && src.size < 1.5 * 1048576 && src.type === 'image/jpeg') return src;
+    const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
     const bl = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.85));
-    return bl ? new File([bl], f.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' }) : f;
-  } catch { return f; }
+    return bl ? new File([bl], name, { type: 'image/jpeg' }) : src;
+  } catch { return src; }
 }
 
 function putFile(url, file, onPct) {
@@ -104,7 +125,7 @@ export default function CaseForm({ formType }) {
         filledFor.current = opd;
         setMeta(m || null);
         // เติมเฉพาะช่องที่มีในฟอร์มนี้ และชื่อทีมงานที่ยังอยู่ในรายการของฟอร์มนี้
-        const ok = ([k, val]) => keysFor(formType).includes(k) &&  (!/^t[A-Z]/.test(F[k].og || '') || opt?.[F[k].og]?.includes(val));
+        const ok = ([k, val]) => keysFor(formType).includes(k) && (!/^t[A-Z]/.test(F[k].og || '') || (formType === 'case' && k === 'cell') || opt?.[F[k].og]?.includes(val));
         if (data) {
           const fill = Object.entries(data).filter(ok).filter(([k]) => !(k === 'round' && formType === 'day0')); // Day 0: ให้ผู้กรอกเลือกครั้งที่เอง // Day 0: ให้ผู้กรอกเลือกครั้งที่เอง
           setV((p) => ({ ...p, ...Object.fromEntries(fill) }));
@@ -143,12 +164,12 @@ export default function CaseForm({ formType }) {
     const one = async () => {
       while (n < list2.length) {
         const i = n++, f = list2[i];
-        const ext = f.name.split('.').pop().toLowerCase();
-        const type = f.type || VIDEO_EXT[ext] || IMG_EXT[ext] || '';
-        if (!type.startsWith(want + '/')) { toast(`ช่องนี้รับเฉพาะ${want === 'image' ? 'รูปภาพ' : 'วิดีโอ'} — ข้าม ${f.name}`); continue; }
-        if (type.startsWith('image/')) { const s = await shrink(f.type ? f : new File([f], f.name, { type })); res[i] = { id: ++seqId, group, file: s, kind: 'image', url: URL.createObjectURL(s), status: 'queued', pct: 0 }; }
-        else if (type.startsWith('video/')) { const vf = f.type ? f : new File([f], f.name, { type }); res[i] = { id: ++seqId, group, file: vf, kind: 'video', url: URL.createObjectURL(vf), status: 'queued', pct: 0 }; }
-        else toast(`ไม่รองรับไฟล์ ${f.name}`);
+        const cls = classify(f.name, f.type); // รับทุกสกุลรูปภาพ/วิดีโอ (เทียบจากชนิดไฟล์หรือนามสกุล)
+        if (!cls) { toast(`ไม่ใช่ไฟล์รูปภาพ/วิดีโอ — ข้าม ${f.name}`); continue; }
+        if (cls.kind !== want) { toast(`ช่องนี้รับเฉพาะ${want === 'image' ? 'รูปภาพ' : 'วิดีโอ'} — ข้าม ${f.name}`); continue; }
+        const base = f.type === cls.mime ? f : new File([f], f.name, { type: cls.mime });
+        if (cls.kind === 'image') { const s = await shrink(base); res[i] = { id: ++seqId, group, file: s, kind: 'image', url: URL.createObjectURL(s), status: 'queued', pct: 0 }; }
+        else res[i] = { id: ++seqId, group, file: base, kind: 'video', url: URL.createObjectURL(base), status: 'queued', pct: 0 };
       }
     };
     await Promise.all([one(), one(), one(), one()]);
@@ -242,7 +263,7 @@ export default function CaseForm({ formType }) {
     <div className="imgs">
       {items.map((f) => (
         <figure key={f.id} className={'up-item ' + (f.status === 'error' ? 'err' : f.status === 'saved' ? 'ok' : '')}>
-          {f.kind === 'image' ? <img src={f.url} alt={f.file.name} /> : <video src={f.url + '#t=0.1'} controls playsInline preload="metadata" aria-label={f.file.name} />}
+          <Pv f={f} />
           <figcaption>{f.file.name.length > 22 ? f.file.name.slice(0, 20) + '…' : f.file.name} · {bytes(f.file.size)}</figcaption>
           {(f.status === 'uploading' || f.status === 'uploaded') && <div className="bar"><i style={{ width: f.pct + '%' }} /></div>}
           <div className="st">{{ queued: '', uploading: `กำลังอัปโหลด ${f.pct}%`, uploaded: 'กำลังบันทึก...', saved: '✓ เรียบร้อย', error: f.error }[f.status]}</div>
@@ -258,7 +279,7 @@ export default function CaseForm({ formType }) {
       <div className="slot" key={kind}>
         <div className="row sp" style={{ margin: '8px 0 4px' }}>
           <b>{kind === 'image' ? '🖼️ รูปภาพ' : '🎬 วิดีโอ'} <span className="mu" style={{ fontWeight: 400 }}>{items.length}/{max} {kind === 'image' ? 'รูป' : 'คลิป'}</span></b>
-          {phase === 'edit' && <label className="btn s">{kind === 'image' ? 'เลือกรูปภาพ' : 'เลือกวิดีโอ'}<input type="file" accept={kind === 'image' ? 'image/*' : 'video/*'} multiple hidden onChange={(e) => { addFiles(g[0], kind, e.target.files); e.target.value = ''; }} /></label>}
+          {phase === 'edit' && <label className="btn s">{kind === 'image' ? 'เลือกรูปภาพ' : 'เลือกวิดีโอ'}<input type="file" accept={kind === 'image' ? ACCEPT_IMG : ACCEPT_VID} multiple hidden onChange={(e) => { addFiles(g[0], kind, e.target.files); e.target.value = ''; }} /></label>}
         </div>
         {items.length ? fileItems(items) : <div className="empty">{kind === 'image' ? 'ยังไม่มีรูปภาพ' : 'ยังไม่มีวิดีโอ'}</div>}
       </div>
@@ -290,7 +311,7 @@ export default function CaseForm({ formType }) {
         {steps.map((s, i) => (
           <div className="card sec" data-s={i} key={s[0]}>
             <h2>{s[0]}</h2>
-            <div className="f2">{s[1].filter((k) => isShown(k, v) && (k !== 'round' || showRound)).map((k) => <Field key={k} locked={locked.has(k)} note={k === 'round' ? roundNote : ''} k={k} formType={formType} minDate={minDateFor(k, formType, today())} value={v[k] ?? ''} onChange={set} options={opt} error={errs[k]} />)}</div>
+            <div className="f2">{s[1].filter((k) => isShown(k, v) && (k !== 'round' || showRound)).map((k) => <Field key={k} locked={locked.has(k) || (formType === 'case' && k === 'cell')} note={k === 'round' ? roundNote : ''} k={k} formType={formType} minDate={minDateFor(k, formType, today())} value={v[k] ?? ''} onChange={set} options={opt} error={errs[k]} />)}</div>
             {i === steps.length - 1 && <><h3 style={{ margin: '16px 0 4px' }}>ข้อมูลเพิ่มเติม</h3><label htmlFor="f-note">หมายเหตุ</label><textarea id="f-note" rows={2} value={v.note} onChange={(e) => set('note', e.target.value)} maxLength={1000} /></>}
           </div>
         ))}

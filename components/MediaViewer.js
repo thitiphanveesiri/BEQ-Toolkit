@@ -38,6 +38,22 @@ function Thumb({ m, i, onOpen }) {
   );
 }
 
+// แสดงรูป/วิดีโอในกรอบขยาย: ถ้าเบราว์เซอร์เปิดชนิดไฟล์นี้ไม่ได้ (เช่น HEIC/TIFF บน Chrome, AVI/WMV ที่ไม่มีตัวถอดรหัส) จะแจ้งและให้ดาวน์โหลดแทนจอว่าง
+function LbMedia({ m, zoom, setZoom }) {
+  const [bad, setBad] = useState(false);
+  const src = `/api/media/${m.id}`;
+  if (bad) return (
+    <div className="lb-bad">
+      <p>{m.kind === 'video' ? '🎬' : '🖼️'} เบราว์เซอร์นี้เปิดไฟล์ชนิดนี้ไม่ได้ ({String(m.name || '').split('.').pop().toUpperCase()})</p>
+      <a className="btn" href={`${src}?download=1`}>⬇ ดาวน์โหลดไฟล์ไปเปิดดู</a>
+      <p className="mu" style={{ fontSize: 12 }}>ลองเปิดด้วย Safari/Chrome เวอร์ชันล่าสุด หรือแอปเล่นวิดีโอ/รูปในเครื่อง</p>
+    </div>
+  );
+  return m.kind === 'video'
+    ? <video src={src} controls autoPlay playsInline preload="metadata" onError={() => setBad(true)}>{m.mime ? <source src={src} type={m.mime} onError={() => setBad(true)} /> : null}</video>
+    : <div className={'lightbox-scroll' + (zoom ? ' zoomed' : '')}><img src={src} alt={m.name} draggable={false} onClick={() => setZoom((z) => !z)} onError={() => setBad(true)} /></div>;
+}
+
 function Lightbox({ items, start, onClose }) {
   const [i, setI] = useState(start), [zoom, setZoom] = useState(false);
   const m = items[i], closeRef = useRef(), touch = useRef(null);
@@ -62,9 +78,8 @@ function Lightbox({ items, start, onClose }) {
       <button ref={closeRef} className="zoom-close" onClick={onClose} aria-label="ปิด">×</button>
       {items.length > 1 && <button className="lb-nav l" onClick={() => move(-1)} aria-label="ก่อนหน้า">‹</button>}
       <div className="lightbox-panel">
-        {m.kind === 'video' ? <video key={m.id} src={`/api/media/${m.id}`} controls autoPlay playsInline preload="metadata" />
-          : <div className={'lightbox-scroll' + (zoom ? ' zoomed' : '')}><img key={m.id} src={`/api/media/${m.id}`} alt={m.name} draggable={false} onClick={() => setZoom((z) => !z)} /></div>}
-        <div className="lightbox-caption">{i + 1}/{items.length} · {m.name} · {bytes(m.size)}{m.drive && <> · <a href={m.drive} target="_blank" rel="noopener noreferrer" style={{ color: '#9be7c8' }}>เปิดใน Drive</a></>}</div>
+        <LbMedia key={m.id} m={m} zoom={zoom} setZoom={setZoom} />
+        <div className="lightbox-caption">{i + 1}/{items.length} · {m.name} · {bytes(m.size)}· <a href={`/api/media/${m.id}?download=1`} style={{ color: '#9be7c8' }}>⬇ ดาวน์โหลด</a>{m.drive && <> · <a href={m.drive} target="_blank" rel="noopener noreferrer" style={{ color: '#9be7c8' }}>เปิดใน Drive</a></>}</div>
         <div className="lb-hint">{m.kind === 'image' ? (zoom ? 'แตะที่รูปเพื่อย่อกลับ · เลื่อนดูส่วนต่างๆ ของรูปได้' : 'แตะที่รูปเพื่อซูม') : ''}{items.length > 1 && ' · ปัดซ้าย/ขวาเพื่อเลื่อนรูป'}</div>
         {items.length > 1 && (
           <div className="lb-strip" role="tablist" aria-label="รูปทั้งหมดในกลุ่ม">

@@ -1,11 +1,15 @@
 import { route, audit } from '../../../lib/api.js';
 import { addRecord, listRecords, updateRecord } from '../../../lib/db.js';
-import { cleanRecord, findDuplicate, findDay0, lockBasics, getFormOptions } from '../../../lib/records.js';
+import { cleanRecord, findDuplicate, findDay0, latestRound, lockBasics, existingCell, getFormOptions } from '../../../lib/records.js';
 import { prepareFolders } from '../../../lib/drive.js';
 import { AppError } from '../../../lib/errors.js';
 
 export const POST = route({ perm: 'fillForm' }, async ({ req, user, body }) => {
-  const rec = await lockBasics(cleanRecord(body?.formType, body?.data, await getFormOptions(body?.formType)));
+  // ฟอร์ม F/U: ช่องเซลล์ล็อก — ใช้เซลล์เดิมของคนไข้ (ไม่รับค่าจากฟอร์ม)
+  const input = body?.formType === 'case' ? { ...body?.data, cell: undefined } : body?.data;
+  const rec = await lockBasics(cleanRecord(body?.formType, input, await getFormOptions(body?.formType)));
+  if (rec.formType === 'case') rec.cell = await existingCell(rec.opd);
+  if (rec.formType === 'case') rec.round = await latestRound(rec.opd);
   // Day 0 ซ้ำ HN เดิมและครั้งที่เดิม → อัปเดตข้อมูลเดิม (คงวันที่มาปลูกเดิม) และรูปใหม่จะเข้าชุดเดิม/โฟลเดอร์เดิม
   if (rec.formType === 'day0') {
     const old = await findDay0(rec);

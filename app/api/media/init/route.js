@@ -3,11 +3,10 @@ import { listRecords, listMedia, uid } from '../../../../lib/db.js';
 import { signToken } from '../../../../lib/auth.js';
 import { startUpload, safeName } from '../../../../lib/drive.js';
 import { groupsFor, groupLabel } from '../../../../lib/fields.js';
+import { classify, extOf } from '../../../../lib/mediatypes.js';
 import { AppError } from '../../../../lib/errors.js';
 
 const MAX_IMAGES = 50, MAX_VIDEOS = 10; // ต่อช่อง (แยกรูปภาพ/วิดีโอ)
-const IMG = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/heic': '.heic', 'image/heif': '.heif' };
-const VID = { 'video/mp4': '.mp4', 'video/quicktime': '.mov', 'video/webm': '.webm', 'video/x-m4v': '.m4v' };
 const mb = (n) => n * 1024 * 1024;
 
 // ขั้น 1: ตรวจสิทธิ์/ชนิดไฟล์/ขนาด แล้วให้ URL สำหรับส่งไฟล์ตรงเข้า Drive พร้อมโทเคนยืนยัน (ไม่เขียนชีต)
@@ -17,10 +16,11 @@ export const POST = route({ perm: 'upload' }, async ({ req, user, body }) => {
   // ผู้มีสิทธิ์อัปโหลดแนบรูปเข้าเคสได้ (รวมกรณีกรอก Day 0 ซ้ำเพื่ออัปเดตเคสเดิม)
   const group = String(body.group || '');
   if (!groupsFor(rec.formType).some((g) => g[0] === group)) throw new AppError(400, 'ช่องรูปภาพไม่ถูกต้อง');
-  const mime = String(body.mime || '').toLowerCase(), size = Number(body.size);
-  const ext = IMG[mime] || VID[mime];
-  if (!ext) throw new AppError(400, 'รองรับเฉพาะรูป JPG/PNG/WebP/HEIC และวิดีโอ MP4/MOV/WebM');
-  const kind = IMG[mime] ? 'image' : 'video';
+  const size = Number(body.size);
+  const cls = classify(body.name, body.mime); // รับทุกสกุลรูปภาพ/วิดีโอ (ไม่รวม SVG)
+  if (!cls) throw new AppError(400, 'ไฟล์นี้ไม่ใช่รูปภาพหรือวิดีโอที่รองรับ');
+  const { kind, mime } = cls;
+  const ext = '.' + (extOf(body.name) || mime.split('/')[1].replace(/[^a-z0-9]/g, '').slice(0, 5) || (kind === 'image' ? 'jpg' : 'mp4'));
   const limit = mb(Number(kind === 'image' ? process.env.MAX_IMAGE_MB || 25 : process.env.MAX_VIDEO_MB || 1024));
   if (!(size > 0) || size > limit) throw new AppError(400, `ไฟล์ใหญ่เกินกำหนด (${kind === 'image' ? 'รูป' : 'วิดีโอ'}สูงสุด ${Math.round(limit / mb(1))} MB)`);
   const max = kind === 'image' ? MAX_IMAGES : MAX_VIDEOS;

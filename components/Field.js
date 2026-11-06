@@ -90,9 +90,9 @@ export default function Field({ k, value, onChange, options, error, idp = 'f', f
     );
   } else if (f.t === 'select') {
     input = (
-      <select id={id} value={value} onChange={(e) => onChange(k, e.target.value)} aria-invalid={!!error} disabled={!list.length}>
-        {!list.length ? <option value="">— {emptyMsg} —</option> : f.blank && <option value="">— เลือก —</option>}
-        {list.map((z) => <option key={z} value={z}>{f.og?.startsWith('t') ? options?.titles?.[z] || z : z}</option>)}
+      <select id={id} value={value} onChange={(e) => onChange(k, e.target.value)} aria-invalid={!!error} disabled={locked || !list.length}>
+        {!list.length && !value ? <option value="">— {emptyMsg} —</option> : f.blank && <option value="">— เลือก —</option>}
+        {(value && !list.includes(value) ? [value, ...list] : list).map((z) => <option key={z} value={z}>{f.og?.startsWith('t') ? options?.titles?.[z] || z : z}</option>)}
       </select>
     );
   } else {
