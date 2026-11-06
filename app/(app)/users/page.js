@@ -10,17 +10,22 @@ const PERM_LABELS = [['fillForm', 'กรอก/ส่งฟอร์ม'], ['up
 
 function Editor({ u, onClose, onSaved }) {
   const toast = useToast(), isNew = !u;
-  const [f, setF] = useState({ username: '', name: u?.name || '', title: u?.title || '', role: u?.role || 'bt', active: u ? u.active : true, password: '', tm: Object.fromEntries(Object.keys(TEAM_LABELS).map((g) => [g, u?.teams?.[g] === true ? '1' : u?.teams?.[g] === false ? '0' : ''])), ov: Object.fromEntries(OVERRIDABLE.map((p) => [p, u?.overrides?.[p] === true ? '1' : u?.overrides?.[p] === false ? '0' : ''])) });
+  const [f, setF] = useState({ username: u?.username || '', name: u?.name || '', title: u?.title || '', role: u?.role || 'bt', active: u ? u.active : true, password: '', tm: Object.fromEntries(Object.keys(TEAM_LABELS).map((g) => [g, u?.teams?.[g] === true ? '1' : u?.teams?.[g] === false ? '0' : ''])), ov: Object.fromEntries(OVERRIDABLE.map((p) => [p, u?.overrides?.[p] === true ? '1' : u?.overrides?.[p] === false ? '0' : ''])) });
   const overrides = Object.fromEntries(OVERRIDABLE.filter((p) => f.ov[p]).map((p) => [p, f.ov[p] === '1']));
   const teams = Object.fromEntries(Object.keys(TEAM_LABELS).filter((g) => f.tm[g]).map((g) => [g, f.tm[g] === '1']));
   const who = { role: f.role, perms: Object.entries(overrides).map(([k, v]) => `${k}:${v ? 1 : 0}`).join(',') }; // บทบาท + สิทธิ์รายบัญชีที่เลือกอยู่
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(false), [delAsk, setDelAsk] = useState(false), { user: me } = useMe();
+  async function del() {
+    setBusy(true);
+    try { await api('/api/users/' + u.id, { method: 'DELETE' }); toast('ลบผู้ใช้แล้ว'); onSaved(); }
+    catch (x) { toast('❌ ' + x.message); setBusy(false); setDelAsk(false); }
+  }
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
   async function save(e) {
     e.preventDefault(); setBusy(true);
     try {
       if (isNew) await api('/api/users', { method: 'POST', body: { ...f, overrides, teams } });
-      else await api('/api/users/' + u.id, { method: 'PATCH', body: { name: f.name, title: f.title, role: f.role, active: f.active, overrides, teams, ...(f.password ? { password: f.password } : {}) } });
+      else await api('/api/users/' + u.id, { method: 'PATCH', body: { username: f.username, name: f.name, title: f.title, role: f.role, active: f.active, overrides, teams, ...(f.password ? { password: f.password } : {}) } });
       toast('บันทึกผู้ใช้แล้ว'); onSaved();
     } catch (x) { toast('❌ ' + x.message); setBusy(false); }
   }
@@ -28,7 +33,7 @@ function Editor({ u, onClose, onSaved }) {
     <div className="ov" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <form className="mod" id="userEditor" onSubmit={save}>
         <h2>{isNew ? 'เพิ่มผู้ใช้' : 'แก้ไขผู้ใช้ · ' + u.username}</h2>
-        {isNew && <><label htmlFor="un">Username</label><input id="un" value={f.username} onChange={(e) => set('username', e.target.value.replace(/[^A-Za-z0-9._-]/g, '').slice(0, 32).toLowerCase())} required autoCapitalize="none" autoComplete="off" minLength={3} maxLength={32} title="ใช้ได้เฉพาะ a-z 0-9 . _ - ความยาว 3–32 ตัว" /><p className="mu" style={{ margin: '3px 0 0', fontSize: 12 }}>ใช้ได้เฉพาะ a-z, 0-9, . _ - (Username เป็นตัวพิมพ์เล็กเสมอ — ระบบแปลงให้ ส่วนรหัสผ่านแยกตัวพิมพ์ใหญ่-เล็กตามที่พิมพ์)</p></>}
+        {<><label htmlFor="un">Username</label><input id="un" value={f.username} onChange={(e) => set('username', e.target.value.replace(/[^A-Za-z0-9._-]/g, '').slice(0, 32).toLowerCase())} required autoCapitalize="none" autoComplete="off" minLength={3} maxLength={32} title="ใช้ได้เฉพาะ a-z 0-9 . _ - ความยาว 3–32 ตัว" /><p className="mu" style={{ margin: '3px 0 0', fontSize: 12 }}>ใช้ได้เฉพาะ a-z, 0-9, . _ - (Username เป็นตัวพิมพ์เล็กเสมอ — ระบบแปลงให้ ส่วนรหัสผ่านแยกตัวพิมพ์ใหญ่-เล็กตามที่พิมพ์)</p></>}
         <label htmlFor="nm">ชื่อที่แสดง</label><input id="nm" value={f.name} onChange={(e) => set('name', e.target.value)} required maxLength={80} />
         {['doctor', 'doctor_lead'].includes(f.role) && <><label htmlFor="tt">คำนำหน้า (แสดงหน้าชื่อในรายการเลือกแพทย์)</label><select id="tt" value={f.title || DOC_TITLES[0]} onChange={(e) => set('title', e.target.value)}>{DOC_TITLES.map((t) => <option key={t} value={t}>{t}</option>)}</select></>}
         <label htmlFor="rl">บทบาท</label>
@@ -64,6 +69,9 @@ function Editor({ u, onClose, onSaved }) {
         <label htmlFor="pw">{isNew ? 'รหัสผ่าน (อย่างน้อย 8 ตัวอักษร)' : 'ตั้งรหัสผ่านใหม่ (เว้นว่างถ้าไม่เปลี่ยน)'}</label>
         <PasswordInput id="pw" value={f.password} onChange={(e) => set('password', e.target.value)} minLength={8} required={isNew} autoComplete="new-password" />
         {!isNew && <label className="permcheck"><input type="checkbox" checked={f.active} onChange={(e) => set('active', e.target.checked)} /> เปิดใช้งานบัญชีนี้</label>}
+        {!isNew && u.id !== me.id && (delAsk
+          ? <div className="banner" style={{ marginTop: 14 }}>ลบ “{u.name}” ({u.username}) ใช่ไหม? บัญชีจะล็อกอินไม่ได้และหายจากรายการทันที (ประวัติเคสที่เคยกรอกยังอยู่)<div className="row" style={{ gap: 8, marginTop: 8 }}><button type="button" className="btn s" onClick={() => setDelAsk(false)} disabled={busy}>ไม่ลบ</button><button type="button" className="btn d" onClick={del} disabled={busy}>ยืนยันลบ</button></div></div>
+          : <button type="button" className="btn d sm" style={{ marginTop: 14 }} onClick={() => setDelAsk(true)}>🗑️ ลบผู้ใช้นี้</button>)}
         <div className="row" style={{ marginTop: 16, justifyContent: 'flex-end' }}><button type="button" className="btn s" onClick={onClose}>ยกเลิก</button><button className="btn" disabled={busy}>{busy ? 'กำลังบันทึก...' : 'บันทึก'}</button></div>
       </form>
     </div>

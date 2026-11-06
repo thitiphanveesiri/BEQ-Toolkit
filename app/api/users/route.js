@@ -6,7 +6,7 @@ import { AppError } from '../../../lib/errors.js';
 import { pub } from '../../../lib/userview.js';
 
 
-export const GET = route({ perm: 'manage' }, async () => ({ users: (await listUsers()).map(pub) }));
+export const GET = route({ perm: 'manage' }, async () => ({ users: (await listUsers()).filter((u) => u.active !== 'DELETED').map(pub) }));
 
 export const POST = route({ perm: 'manage' }, async ({ req, user, body }) => {
   const username = String(body?.username || '').trim().toLowerCase();
