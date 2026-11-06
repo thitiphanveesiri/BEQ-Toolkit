@@ -107,7 +107,7 @@ html,body{overflow-x:hidden}img{max-width:100%}.hb,.scrim{display:none}
 .grid{grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr))}.grid2{grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr))}.f2{grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr))}
 .tabs{overflow-x:auto;flex-wrap:nowrap}.tabs button{white-space:nowrap;flex:none}.btn,.tabs button{min-height:40px}
 @media(min-width:1400px){main{max-width:1280px}}
-@media(max-width:900px){
+@media(max-width:600px){
  .shell{display:block}
  aside{position:fixed;left:0;top:0;bottom:0;width:272px;max-width:84vw;height:100dvh;z-index:40;transform:translateX(-102%);transition:transform .25s;padding-top:calc(18px + env(safe-area-inset-top,0px))}
  .nav-open aside{transform:none;box-shadow:0 0 40px rgba(0,0,0,.35)}.nav-open .scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:30}
@@ -130,7 +130,7 @@ html,body{overflow-x:hidden}img{max-width:100%}.hb,.scrim{display:none}
 label.btn{display:inline-flex;align-items:center;gap:6px;margin:0;cursor:pointer}label.pill{display:inline-block;margin:0}
 .sk{position:sticky;top:0;background:var(--sf);z-index:6;padding:4px 0}
 .bar{height:6px;background:var(--mt);border-radius:9px;overflow:hidden}.bar i{display:block;height:100%;background:var(--pr);transition:width .3s}
-@media(max-width:900px){
+@media(max-width:600px){
  .hb{display:none}.nav-open .scrim{z-index:39}
  .bn{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:35;background:var(--sf);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom,0px)}
  .bn button{flex:1;background:none;border:0;color:var(--mu);font:inherit;font-size:11px;padding:8px 2px;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:56px;cursor:pointer}.bn span{font-size:20px;line-height:1}.bn .on{color:var(--pr);font-weight:600}
@@ -141,6 +141,7 @@ label.btn{display:inline-flex;align-items:center;gap:6px;margin:0;cursor:pointer
  #nf{padding-bottom:70px}/* มือถือ: ฟอร์มยาวเลื่อนลงทีเดียว (ไม่แบ่งขั้นตอน) */
  .fab{display:flex;position:fixed;right:16px;bottom:calc(76px + env(safe-area-inset-bottom,0px));width:56px;height:56px;border-radius:50%;border:0;background:var(--pr);color:var(--pt);font-size:28px;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(0,0,0,.25);z-index:15}
 }
+@media(max-width:1024px){.shell{grid-template-columns:220px 1fr}}
 @media(max-width:860px){.shell{grid-template-columns:200px 1fr}.mn header{z-index:25}.split{grid-template-columns:1fr;min-height:100svh;justify-content:center;padding:calc(16px + env(safe-area-inset-top,0px)) 14px calc(16px + env(safe-area-inset-bottom,0px));gap:0}.hero{display:none}.split .login{margin:0 auto;padding:22px 20px;width:100%;max-width:460px;align-self:center;justify-self:stretch}.split .login .banner{line-height:1.6}.split .login .banner .btn{margin:6px 4px 0 0}.acct[open]::before{content:'';position:fixed;inset:0;background:rgba(0,0,0,.58);z-index:55}.acctmenu{position:fixed;top:calc(64px + env(safe-area-inset-top,0px));left:12px;right:12px;width:auto;min-width:0;max-height:calc(100dvh - 92px - env(safe-area-inset-top,0px));overflow:auto;z-index:60;border-radius:14px;padding:10px}.acctmenu button{min-height:46px}.permgrid{grid-template-columns:1fr}}
 @media(max-width:680px){.users-table{display:none}.users-cards{display:grid;gap:12px}.user-card-head{align-items:flex-start}.user-perm-row{font-size:12px}.user-actions{gap:7px}.user-actions .btn{font-size:12px}}
 @media(max-width:600px){.split{min-height:100svh;justify-content:flex-start;padding:0 16px calc(18px + env(safe-area-inset-bottom,0px));gap:0}.split .hero{display:block;width:calc(100% + 32px);margin:0 -16px;padding:calc(34px + env(safe-area-inset-top,0px)) 21px 62px;text-align:left;border-radius:0 0 26px 26px;background:linear-gradient(140deg,#087c67,#0c9277)}.split .hero small{font-size:10px;letter-spacing:.14em;color:#d2f3e8}.split .hero .brand-logo{width:92px;height:92px;margin:0 auto 12px 0;border-radius:14px}.split .hero h1{font-size:31px;line-height:1.2;margin:8px 0}.split .hero p{max-width:440px;margin:7px 0 0;font-size:14px;line-height:1.55;color:#e2f7f0}.split .login{margin:-30px auto 16px;padding:21px 18px;width:100%;max-width:480px;align-self:auto;justify-self:stretch;border-radius:18px}.split .login h1{font-size:23px;margin-bottom:4px}.split .login>p.mu{font-size:13px;margin:5px 0 12px}.split .login label{margin-top:11px}.split .login input{min-height:46px}.split .login #lf>.btn{min-height:48px}.split .login .banner{font-size:12px;padding:10px 11px}.split .login .banner .btn{min-height:42px;margin:6px 5px 0 0;padding:8px 11px;font-size:12px}}
@@ -174,7 +175,7 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--dn)}
 .dz{border:2px dashed var(--bd);border-radius:12px;padding:16px;text-align:center}
 table .num{text-align:right}
 .hr span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-@media(min-width:901px){.hr{grid-template-columns:150px 1fr 34px}}
+@media(min-width:601px){.hr{grid-template-columns:150px 1fr 34px}}
 @media(max-width:600px){.cmp{grid-template-columns:1fr}.thumb img,.thumb .ph{height:96px}}
 .opdbox{display:flex;align-items:stretch}.opdpre{display:grid;place-items:center;padding:0 12px;border:1px solid var(--bd);border-right:0;border-radius:10px 0 0 10px;background:var(--mt);font-weight:600;color:var(--mu)}
 .opdbox input{border-radius:0 10px 10px 0;letter-spacing:.06em}
@@ -249,3 +250,18 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--dn)!import
 .fu-item:hover{background:var(--mt)}.fu-item.overdue{border-color:var(--dn)}
 
 .permlist{display:grid;gap:2px;margin-bottom:6px}.permlist .permcheck{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--bd);margin:0;cursor:pointer;min-height:44px}.permlist .permcheck input{width:20px;height:20px;margin:0;flex:none}.permlist .permcheck.chg{border-color:var(--wn);background:color-mix(in srgb,var(--wn) 10%,transparent)}
+
+/* ===== iPad / แท็บเล็ต (601–1024px): เมนูข้างถาวร + เลย์เอาต์แบบหน้าจอใหญ่ ===== */
+@media(min-width:601px) and (max-width:1024px){
+ main{padding:20px 22px 28px}
+ aside{padding:14px 10px}aside button,aside .navlink{padding:12px 12px}
+ .mn header{padding:10px 18px}
+ .modal,.mod{max-width:min(640px,92vw)}
+}
+/* หน้าจอสัมผัส (มือถือ/iPad): ปุ่มและช่องกรอกใหญ่พอจิ้มง่าย และกันหน้าเด้งซูมตอนโฟกัสช่องกรอกบน iOS */
+@media(pointer:coarse){
+ input,select,textarea{font-size:16px}
+ .btn,.tabs button,aside button,aside .navlink{min-height:44px}
+ .pill span{min-height:44px;line-height:26px}
+ .mrow{min-height:44px}
+}
