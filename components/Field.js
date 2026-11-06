@@ -9,7 +9,7 @@ export default function Field({ k, value, onChange, options, error, idp = 'f', f
   const [q, setQ] = useState('');
   const [pu, setPu] = useState('เดือน'); // หน่วยที่เลือกของช่องระยะ (ใช้ตอนยังไม่ได้ใส่ตัวเลข)
   let list = f.o || (f.og ? options?.[f.og] || [] : null);
-  if (list && k === 'hairMethod') list = [...list].sort((a, b) => (a === 'อื่น ๆ') - (b === 'อื่น ๆ') || a.localeCompare(b, 'en', { sensitivity: 'base' })); // เรียงตามตัวอักษร (อื่น ๆ ไว้ท้าย)
+  if (list && (k === 'hairMethod' || k === 'inj')) list = [...list].sort((a, b) => (a === 'อื่น ๆ') - (b === 'อื่น ๆ') || a.localeCompare(b, 'en', { sensitivity: 'base' })); // เรียงตามตัวอักษร (อื่น ๆ ไว้ท้าย)
   const cur = f.t === 'multi' ? splitMulti(value) : [];
   // ค่าเดิมที่ไม่อยู่ในรายการแล้ว (ข้อมูลเก่า/ผู้ใช้ที่ถูกปิด) ยังแสดงให้เห็นเพื่อไม่ให้ข้อมูลหาย
   if (list && f.t === 'select' && value && !list.includes(value)) list = [value, ...list];
