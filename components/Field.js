@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 const BIG = 8; // รายการยาวกว่านี้ใช้ช่องเลือกแบบค้นหาได้
-import { F, OPD_LEN, PERIOD_RE, PERIOD_UNITS, PERIOD_QUICK, labelOf, splitMulti, MULTI_SEP } from '../lib/fields.js';
+import { F, isReq, fmtDigits, OPD_LEN, PERIOD_RE, PERIOD_UNITS, PERIOD_QUICK, labelOf, splitMulti, MULTI_SEP } from '../lib/fields.js';
 
 // ช่องกรอกตามนิยามใน lib/fields.js (ใช้ทั้งฟอร์มส่งเคสและหน้าแก้ไขของผู้ดูแล)
 export default function Field({ k, value, onChange, options, error, idp = 'f', formType, minDate, locked = false, note }) {
@@ -18,14 +18,14 @@ export default function Field({ k, value, onChange, options, error, idp = 'f', f
   const id = `${idp}-${k}`;
   let input;
   if (f.t === 'opd') {
-    const digits = String(value || '').replace(/^HN-/, '');
+    const digits = String(value || '').replace(/^HN-/, '').replace(/\D/g, '');
     input = (
       <>
         <div className="opdbox"><span className="opdpre" aria-hidden="true">HN-</span>
-          <input id={id} inputMode="numeric" autoComplete="off" disabled={locked} maxLength={OPD_LEN} placeholder={`เลข ${OPD_LEN} หลัก`} value={digits} aria-invalid={!!error} aria-describedby={id + '-h'}
-            onChange={(e) => { const d = e.target.value.replace(/\D/g, '').slice(0, OPD_LEN); onChange(k, d ? 'HN-' + d : ''); }} />
+          <input id={id} inputMode="numeric" autoComplete="off" disabled={locked} maxLength={OPD_LEN + 2} placeholder="00000-0-000000" value={fmtDigits(digits)} aria-invalid={!!error} aria-describedby={id + '-h'}
+            onChange={(e) => { const d = e.target.value.replace(/\D/g, '').slice(0, OPD_LEN); onChange(k, d ? 'HN-' + fmtDigits(d) : ''); }} />
         </div>
-        <p id={id + '-h'} className="mu" style={{ margin: '3px 0 0', fontSize: 12 }}>กรอกตัวเลข {OPD_LEN} หลัก ({digits.length}/{OPD_LEN}) ระบบเก็บเป็น HN-{digits || 'x'.repeat(OPD_LEN)}</p>
+        <p id={id + '-h'} className="mu" style={{ margin: '3px 0 0', fontSize: 12 }}>พิมพ์ตัวเลข {OPD_LEN} หลักต่อกันได้เลย ระบบใส่ขีดให้เอง ({digits.length}/{OPD_LEN})</p>
       </>
     );
   } else if (f.t === 'pills') {
@@ -105,8 +105,8 @@ export default function Field({ k, value, onChange, options, error, idp = 'f', f
     );
   }
   return (
-    <div className={'fld' + (locked ? ' lk' : '') + (f.req && !String(value || '').trim() ? ' need' : '')} style={['multi', 'pills', 'period'].includes(f.t) ? { gridColumn: '1 / -1' } : undefined}>
-      <label htmlFor={['pills', 'multi'].includes(f.t) ? undefined : id}>{lbl}{f.req ? <span className="req"> *</span> : <span className="opt"> (ไม่บังคับ)</span>}</label>
+    <div className={'fld' + (locked ? ' lk' : '') + (isReq(k, formType) && !String(value || '').trim() ? ' need' : '')} style={['multi', 'pills', 'period'].includes(f.t) ? { gridColumn: '1 / -1' } : undefined}>
+      <label htmlFor={['pills', 'multi'].includes(f.t) ? undefined : id}>{lbl}{isReq(k, formType) ? <span className="req"> *</span> : <span className="opt"> (ไม่บังคับ)</span>}</label>
       {input}
       {f.t === 'date' && minDate && <p className="mu" style={{ margin: '3px 0 0', fontSize: 12 }}>เลือกย้อนหลังได้ไม่เกิน 1 วัน (วันนี้และอนาคตเลือกได้)</p>}
       {(f.hintBy?.[formType] || f.hint) && <p className="mu" style={{ margin: '3px 0 0', fontSize: 12 }}>{f.hintBy?.[formType] || f.hint}</p>}

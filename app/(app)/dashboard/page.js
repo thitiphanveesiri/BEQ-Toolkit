@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useMe, Spinner } from '../../../components/Ctx.js';
 import { useApi, D } from '../../../lib/client.js';
 import { ROLES } from '../../../lib/roles.js';
+import { fmtOpd } from '../../../lib/fields.js';
 import PatientTable from '../../../components/PatientTable.js';
 
 export default function Dashboard() {
@@ -38,7 +39,7 @@ export default function Dashboard() {
           <div className="fu-list">
             {rem.rows.slice(0, 8).map((r) => (
               <Link key={r.opd + r.months} href={'/patient/' + r.opd} className={'fu-item ' + r.status}>
-                <b>{r.name}</b><span className="mu">{r.opd}</span>
+                <b>{r.name}</b><span className="mu">{fmtOpd(r.opd)}</span>
                 <span>F/U {r.months} เดือน · {D(r.due)}</span>
                 <span className={'tag ' + (r.status === 'overdue' ? 'x' : 'w')}>{r.days > 0 ? `อีก ${r.days} วัน` : r.days === 0 ? 'วันนี้' : `เลยมา ${-r.days} วัน`}</span>
               </Link>

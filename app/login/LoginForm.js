@@ -1,4 +1,5 @@
 'use client';
+import PasswordInput from '../../components/PasswordInput.js';
 import { useState } from 'react';
 import { api } from '../../lib/client.js';
 
@@ -24,9 +25,9 @@ export default function LoginForm({ mock }) {
         <p className="mu">ใช้บัญชีที่ผู้ดูแลระบบสร้างให้</p>
         <form onSubmit={submit}>
           <label htmlFor="u">Username</label>
-          <input id="u" value={u} onChange={(e) => setU(e.target.value)} autoComplete="username" autoCapitalize="none" required autoFocus />
+          <input id="u" value={u} onChange={(e) => setU(e.target.value)} autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} required autoFocus />
           <label htmlFor="p">Password</label>
-          <input id="p" type="password" value={p} onChange={(e) => setP(e.target.value)} autoComplete="current-password" required />
+          <PasswordInput id="p" value={p} onChange={(e) => setP(e.target.value)} autoComplete="current-password" required />
           <p role="alert" className="mu" style={{ color: 'var(--dn)', minHeight: 20 }}>{err}</p>
           <button className="btn" style={{ width: '100%' }} disabled={busy}>{busy ? <><span className="spin" /> กำลังเข้าสู่ระบบ...</> : 'เข้าสู่ระบบ'}</button>
         </form>

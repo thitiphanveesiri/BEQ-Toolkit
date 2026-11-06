@@ -265,3 +265,9 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--dn)!import
  .pill span{min-height:44px;line-height:26px}
  .mrow{min-height:44px}
 }
+
+.pwbox{position:relative}.pwbox input{padding-right:48px}.pweye{position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:0;font-size:20px;min-width:44px;min-height:44px;cursor:pointer;line-height:1}
+.acctmenu .btn{min-height:44px}
+
+/* iPad/แท็บเล็ต: เมนูบัญชีเป็น dropdown เล็กใต้ปุ่ม (ไม่คลุมทั้งจอเหมือนมือถือ) */
+@media(min-width:601px){.acct[open]::before{display:none}.acctmenu{position:absolute;left:auto;right:0;top:calc(100% + 8px);width:auto;min-width:240px;max-height:none;z-index:80}}

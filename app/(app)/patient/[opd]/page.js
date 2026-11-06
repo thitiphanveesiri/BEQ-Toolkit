@@ -6,7 +6,7 @@ import { useMe, Denied, Spinner } from '../../../../components/Ctx.js';
 import MediaViewer from '../../../../components/MediaViewer.js';
 import RecordEditor from '../../../../components/RecordEditor.js';
 import { useApi, D } from '../../../../lib/client.js';
-import { F, procLabel, roundNo, labelOf } from '../../../../lib/fields.js';
+import { F, fmtOpd, procLabel, roundNo, labelOf } from '../../../../lib/fields.js';
 
 // ข้อมูลประจำตัวคนไข้ (ด้านบน) และข้อมูลของแต่ละครั้งที่ส่งฟอร์ม (ในแต่ละ dropdown)
 const SHOW = ['opd', 'name', 'gender', 'age', 'nat', 'round', 'plant', 'uploaded', 'procType', 'area', 'hairMethod', 'tool', 'inj', 'ct', 'visitPeriod', 'cell', 'doc', 'ph', 'ck'];
@@ -55,7 +55,7 @@ export default function Patient() {
   const procOf = (r) => (r.procType ? '' : procLabel(r) === '—' ? '' : procLabel(r));
   return (
     <>
-      <div className="row sp"><Link className="btn s sm" href="/search">← ย้อนกลับ</Link><span className="mu">{p.opd}</span></div>
+      <div className="row sp"><Link className="btn s sm" href="/search">← ย้อนกลับ</Link><span className="mu">HN {fmtOpd(p.opd)}</span></div>
       <h1 style={{ marginTop: 10 }}>{p.name}</h1>
       <div className="tabs" role="tablist">
         <button role="tab" aria-selected={tab === 'info'} className={tab === 'info' ? 'on' : ''} onClick={() => setTab('info')}>ข้อมูลคนไข้</button>

@@ -1,6 +1,7 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import { D } from '../lib/client.js';
+import { fmtOpd } from '../lib/fields.js';
 
 export default function PatientTable({ rows }) {
   const router = useRouter();
@@ -14,7 +15,7 @@ export default function PatientTable({ rows }) {
           <tbody>
             {rows.map((p) => (
               <tr key={p.opd} className="click" onClick={() => open(p.opd)}>
-                <td>{p.opd}</td><td>{p.name}</td><td>{D(p.date)}</td><td>{p.proc}</td><td>{p.detail || '—'}</td><td>{p.ct || '—'}</td><td>{p.photos}</td>
+                <td>{fmtOpd(p.opd)}</td><td>{p.name}</td><td>{D(p.date)}</td><td>{p.proc}</td><td>{p.detail || '—'}</td><td>{p.ct || '—'}</td><td>{p.photos}</td>
                 <td><button type="button" className="btn s sm" onClick={(e) => { e.stopPropagation(); open(p.opd); }}>ดูข้อมูล</button></td>
               </tr>
             ))}
@@ -24,7 +25,7 @@ export default function PatientTable({ rows }) {
       <div className="pcards">
         {rows.map((p) => (
           <article className="pc" key={p.opd} onClick={() => open(p.opd)}>
-            <div className="row sp"><b>{p.name}</b><span className="tag">{p.opd}</span></div>
+            <div className="row sp"><b>{p.name}</b><span className="tag">{fmtOpd(p.opd)}</span></div>
             <div className="mu">ล่าสุด {D(p.date)} · {p.proc}</div>
             <div className="mu">วิธี / รายการ {p.detail || '—'} · ประเภทเคส {p.ct || '—'} · {p.photos} ไฟล์</div>
             <button type="button" className="btn s" style={{ marginTop: 8 }}>ดูข้อมูล</button>

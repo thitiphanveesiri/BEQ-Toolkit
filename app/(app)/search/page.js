@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useMe, Denied, Spinner } from '../../../components/Ctx.js';
 import { useApi } from '../../../lib/client.js';
+import { fmtDigits } from '../../../lib/fields.js';
 import PatientTable from '../../../components/PatientTable.js';
 
 export default function Search() {
@@ -16,7 +17,7 @@ export default function Search() {
       <div className="card">
         <div className="sk">
           <label htmlFor="q" className="mu" style={{ position: 'absolute', left: -9999 }}>ค้นหา</label>
-          <input id="q" type="search" placeholder="พิมพ์ชื่อหรือเลข OPD เช่น OPD-9002" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" />
+          <input id="q" type="search" placeholder="พิมพ์ชื่อหรือเลข OPD เช่น 12345-6-789012" value={q} onChange={(e) => { const v = e.target.value; setQ(/^[\d-]+$/.test(v) && /\d/.test(v) ? fmtDigits(v) : v); }} autoComplete="off" />
           <p className="mu" style={{ margin: '8px 0 0' }}>{data ? `พบ ${data.total} คน${data.total > data.rows.length ? ` (แสดง ${data.rows.length} รายการแรก — พิมพ์ค้นหาให้เจาะจงขึ้น)` : ''}` : ''}</p>
         </div>
         {error ? <div className="empty" style={{ color: 'var(--dn)' }}>{error}</div> : loading && !data ? <Spinner /> : <PatientTable rows={data?.rows || []} />}

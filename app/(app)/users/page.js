@@ -1,4 +1,5 @@
 'use client';
+import PasswordInput from '../../../components/PasswordInput.js';
 import { useState } from 'react';
 import { useMe, useToast, Denied, Spinner } from '../../../components/Ctx.js';
 import { api, useApi } from '../../../lib/client.js';
@@ -25,7 +26,7 @@ function Editor({ u, onClose, onSaved }) {
     <div className="ov" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <form className="mod" id="userEditor" onSubmit={save}>
         <h2>{isNew ? 'เพิ่มผู้ใช้' : 'แก้ไขผู้ใช้ · ' + u.username}</h2>
-        {isNew && <><label htmlFor="un">Username</label><input id="un" value={f.username} onChange={(e) => set('username', e.target.value.replace(/[^A-Za-z0-9._-]/g, '').slice(0, 32))} required autoCapitalize="none" autoComplete="off" minLength={3} maxLength={32} title="ใช้ได้เฉพาะ a-z 0-9 . _ - ความยาว 3–32 ตัว" /><p className="mu" style={{ margin: '3px 0 0', fontSize: 12 }}>ใช้ได้เฉพาะ a-z, 0-9, . _ - (ตัวพิมพ์ใหญ่จะถูกเก็บเป็นตัวเล็ก ช่องว่างและตัวอักษรอื่นจะถูกลบให้อัตโนมัติ)</p></>}
+        {isNew && <><label htmlFor="un">Username</label><input id="un" value={f.username} onChange={(e) => set('username', e.target.value.replace(/[^A-Za-z0-9._-]/g, '').slice(0, 32).toLowerCase())} required autoCapitalize="none" autoComplete="off" minLength={3} maxLength={32} title="ใช้ได้เฉพาะ a-z 0-9 . _ - ความยาว 3–32 ตัว" /><p className="mu" style={{ margin: '3px 0 0', fontSize: 12 }}>ใช้ได้เฉพาะ a-z, 0-9, . _ - (Username เป็นตัวพิมพ์เล็กเสมอ — ระบบแปลงให้ ส่วนรหัสผ่านแยกตัวพิมพ์ใหญ่-เล็กตามที่พิมพ์)</p></>}
         <label htmlFor="nm">ชื่อที่แสดง</label><input id="nm" value={f.name} onChange={(e) => set('name', e.target.value)} required maxLength={80} />
         {['doctor', 'doctor_lead'].includes(f.role) && <><label htmlFor="tt">คำนำหน้า (แสดงหน้าชื่อในรายการเลือกแพทย์)</label><select id="tt" value={f.title || DOC_TITLES[0]} onChange={(e) => set('title', e.target.value)}>{DOC_TITLES.map((t) => <option key={t} value={t}>{t}</option>)}</select></>}
         <label htmlFor="rl">บทบาท</label>
@@ -46,7 +47,7 @@ function Editor({ u, onClose, onSaved }) {
           })}
         </div>
         <label htmlFor="pw">{isNew ? 'รหัสผ่าน (อย่างน้อย 8 ตัวอักษร)' : 'ตั้งรหัสผ่านใหม่ (เว้นว่างถ้าไม่เปลี่ยน)'}</label>
-        <input id="pw" type="password" value={f.password} onChange={(e) => set('password', e.target.value)} minLength={8} required={isNew} autoComplete="new-password" />
+        <PasswordInput id="pw" value={f.password} onChange={(e) => set('password', e.target.value)} minLength={8} required={isNew} autoComplete="new-password" />
         {!isNew && <label className="permcheck"><input type="checkbox" checked={f.active} onChange={(e) => set('active', e.target.checked)} /> เปิดใช้งานบัญชีนี้</label>}
         <div className="row" style={{ marginTop: 16, justifyContent: 'flex-end' }}><button type="button" className="btn s" onClick={onClose}>ยกเลิก</button><button className="btn" disabled={busy}>{busy ? 'กำลังบันทึก...' : 'บันทึก'}</button></div>
       </form>

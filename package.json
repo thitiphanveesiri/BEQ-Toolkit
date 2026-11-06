@@ -11,7 +11,8 @@
     "build": "next build",
     "start": "next start",
     "get-token": "node --env-file-if-exists=.env.local scripts/get-token.mjs",
-    "setup": "node --env-file-if-exists=.env.local scripts/setup.mjs"
+    "setup": "node --env-file-if-exists=.env.local scripts/setup.mjs",
+    "migrate-opd": "node --env-file-if-exists=.env.local scripts/migrate-opd.mjs"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

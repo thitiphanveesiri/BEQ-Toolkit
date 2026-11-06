@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Field from './Field.js';
 import { useMe, useToast, Denied, Spinner } from './Ctx.js';
-import { F, isReq, BASIC_LOCK, STEPS, GENDERS, ROUNDS, FORM_TITLES, depsToClear, isShown, shownKeys, groupsFor, keysFor, labelOf, minDateFor, OPD_RE, OPD_ERR } from '../lib/fields.js';
+import { F, isReq, fmtOpd, BASIC_LOCK, STEPS, GENDERS, ROUNDS, FORM_TITLES, depsToClear, isShown, shownKeys, groupsFor, keysFor, labelOf, minDateFor, OPD_RE, OPD_ERR } from '../lib/fields.js';
 import { api, useApi, today, bytes } from '../lib/client.js';
 
 const MAX_IMG = 50, MAX_VID = 10; // ต่อช่อง: รูปภาพ 50 รูป, วิดีโอ 10 คลิป (แยกช่องส่งกัน)
@@ -233,7 +233,7 @@ export default function CaseForm({ formType }) {
   if (phase === 'done') return (
     <div className="card empty" style={{ padding: 36 }}>
       <div style={{ fontSize: 44 }}>✅</div><h2>บันทึกเคสเรียบร้อยแล้ว</h2>
-      <p className="mu">{v.opd} · {v.fname} {v.lname}{files.length ? ` · ${files.length} ไฟล์` : ''}</p>
+      <p className="mu">{fmtOpd(v.opd)} · {v.fname} {v.lname}{files.length ? ` · ${files.length} ไฟล์` : ''}</p>
       <div className="row" style={{ justifyContent: 'center', marginTop: 12 }}><button className="btn" onClick={reset}>+ เพิ่มเคสใหม่</button><button className="btn s" onClick={() => router.push('/dashboard')}>← กลับหน้าหลัก</button></div>
     </div>
   );

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { MeCtx, ToastProvider } from './Ctx.js';
@@ -29,7 +29,14 @@ export default function Shell({ user, perms, mock, children }) {
   const active = (h) => path === h || (h === '/search' && path.startsWith('/patient')) || (h !== '/dashboard' && path.startsWith(h));
   const ini = user.name.replace(/^(นาย|นางสาว|นาง)/, '').trim()[0] || '?';
 
-  useEffect(() => { setNav(false); window.scrollTo(0, 0); }, [path]);
+  const acctRef = useRef(null), [ask, setAsk] = useState(false);
+  useEffect(() => { setNav(false); window.scrollTo(0, 0); acctRef.current?.removeAttribute('open'); }, [path]);
+  // แตะนอกเมนู/กด Esc = ปิดเมนูบัญชี (ยกเลิกการออกจากระบบ)
+  useEffect(() => {
+    const close = (e) => { const d = acctRef.current; if (!d?.open) return; if (e.type === 'keydown' ? e.key === 'Escape' : !d.contains(e.target) || e.target === d) { d.removeAttribute('open'); setAsk(false); } };
+    document.addEventListener('pointerdown', close); document.addEventListener('keydown', close);
+    return () => { document.removeEventListener('pointerdown', close); document.removeEventListener('keydown', close); };
+  }, []);
   useEffect(() => { setDark(getComputedStyle(document.documentElement).colorScheme === 'dark'); }, []);
   // เอฟเฟกต์ไฟส่องขอบการ์ดตามเมาส์ (เหมือน prototype) — เฉพาะอุปกรณ์ที่มีเมาส์
   useEffect(() => {
@@ -78,9 +85,9 @@ export default function Shell({ user, perms, mock, children }) {
               <span className="mu">Dashboard{path === '/dashboard' || !title ? '' : ' › ' + title}</span>
               <div className="who">
                 <button type="button" className="btn s sm theme-toggle" onClick={toggleTheme} aria-label={dark ? 'เปลี่ยนเป็นธีมสว่าง' : 'เปลี่ยนเป็นธีมมืด'} title="สลับธีม">{dark ? '☀️' : '🌙'}</button>
-                <details className="acct">
+                <details className="acct" ref={acctRef} onToggle={(e) => { if (!e.currentTarget.open) setAsk(false); }}>
                   <summary><span className="av">{ini}</span><span><b>{user.name}</b><br /><small className="mu">{ROLES[user.role]} ▾</small></span></summary>
-                  <div className="acctmenu"><strong>{user.name}</strong><button type="button" onClick={logout}>ออกจากระบบ</button></div>
+                  <div className="acctmenu"><strong>{user.name}</strong>{ask ? (<><p className="mu" style={{ margin: '6px 0' }}>ออกจากระบบใช่ไหม?</p><div className="row" style={{ gap: 8 }}><button type="button" className="btn s" style={{ flex: 1 }} onClick={() => { setAsk(false); acctRef.current?.removeAttribute('open'); }}>ยกเลิก</button><button type="button" className="btn d" style={{ flex: 1 }} onClick={logout}>ออกจากระบบ</button></div></>) : (<button type="button" onClick={() => setAsk(true)}>ออกจากระบบ</button>)}</div>
                 </details>
               </div>
             </header>
