@@ -4,21 +4,23 @@ import { useState } from 'react';
 import { useMe, useToast, Denied, Spinner } from '../../../components/Ctx.js';
 import { api, useApi } from '../../../lib/client.js';
 import { ROLES, OVERRIDABLE, DOC_TITLES, can } from '../../../lib/roles.js';
+import { TEAM_LABELS, inTeamByRole } from '../../../lib/fields.js';
 
 const PERM_LABELS = [['fillForm', 'กรอก/ส่งฟอร์ม'], ['upload', 'อัปโหลดรูป/วิดีโอ'], ['viewImages', 'ดูรูป/วิดีโอ'], ['viewStats', 'ดูรายงาน'], ['editData', 'แก้ไขข้อมูลคนไข้'], ['manage', 'จัดการระบบ']];
 
 function Editor({ u, onClose, onSaved }) {
   const toast = useToast(), isNew = !u;
-  const [f, setF] = useState({ username: '', name: u?.name || '', title: u?.title || '', role: u?.role || 'bt', active: u ? u.active : true, password: '', ov: Object.fromEntries(OVERRIDABLE.map((p) => [p, u?.overrides?.[p] === true ? '1' : u?.overrides?.[p] === false ? '0' : ''])) });
+  const [f, setF] = useState({ username: '', name: u?.name || '', title: u?.title || '', role: u?.role || 'bt', active: u ? u.active : true, password: '', tm: Object.fromEntries(Object.keys(TEAM_LABELS).map((g) => [g, u?.teams?.[g] === true ? '1' : u?.teams?.[g] === false ? '0' : ''])), ov: Object.fromEntries(OVERRIDABLE.map((p) => [p, u?.overrides?.[p] === true ? '1' : u?.overrides?.[p] === false ? '0' : ''])) });
   const overrides = Object.fromEntries(OVERRIDABLE.filter((p) => f.ov[p]).map((p) => [p, f.ov[p] === '1']));
+  const teams = Object.fromEntries(Object.keys(TEAM_LABELS).filter((g) => f.tm[g]).map((g) => [g, f.tm[g] === '1']));
   const who = { role: f.role, perms: Object.entries(overrides).map(([k, v]) => `${k}:${v ? 1 : 0}`).join(',') }; // บทบาท + สิทธิ์รายบัญชีที่เลือกอยู่
   const [busy, setBusy] = useState(false);
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
   async function save(e) {
     e.preventDefault(); setBusy(true);
     try {
-      if (isNew) await api('/api/users', { method: 'POST', body: { ...f, overrides } });
-      else await api('/api/users/' + u.id, { method: 'PATCH', body: { name: f.name, title: f.title, role: f.role, active: f.active, overrides, ...(f.password ? { password: f.password } : {}) } });
+      if (isNew) await api('/api/users', { method: 'POST', body: { ...f, overrides, teams } });
+      else await api('/api/users/' + u.id, { method: 'PATCH', body: { name: f.name, title: f.title, role: f.role, active: f.active, overrides, teams, ...(f.password ? { password: f.password } : {}) } });
       toast('บันทึกผู้ใช้แล้ว'); onSaved();
     } catch (x) { toast('❌ ' + x.message); setBusy(false); }
   }
@@ -42,6 +44,19 @@ function Editor({ u, onClose, onSaved }) {
               <label key={p} className={'permcheck' + (changed ? ' chg' : '')} style={{ opacity: fixed ? 0.6 : 1 }}>
                 <input type="checkbox" checked={on} disabled={fixed} onChange={(e) => setF((s) => ({ ...s, ov: { ...s.ov, [p]: e.target.checked === base ? '' : e.target.checked ? '1' : '0' } }))} />
                 <span>{l}</span>{changed && <small className="tag w">ปรับเฉพาะบัญชีนี้</small>}{fixed && f.role !== 'admin' && <small className="mu">ตามบทบาท</small>}
+              </label>
+            );
+          })}
+        </div>
+        <h3 style={{ margin: '16px 0 2px' }}>แสดงชื่อในรายการเลือกของช่อง</h3>
+        <p className="mu" style={{ margin: '0 0 6px', fontSize: 12 }}>ติ๊กเพื่อให้ชื่อบัญชีนี้ปรากฏเป็นตัวเลือกในช่องนั้นของฟอร์ม — ค่าเริ่มต้นตามบทบาท ปรับเฉพาะบัญชีได้ (เช่น แพทย์ที่ไม่เป็นแพทย์เจ้าของเคส) ข้อมูลที่เคยกรอกไว้แล้วไม่ถูกเปลี่ยน</p>
+        <div className="permlist">
+          {Object.entries(TEAM_LABELS).map(([g, l]) => {
+            const base = inTeamByRole(f.role, g), on = f.tm[g] === '1' ? true : f.tm[g] === '0' ? false : base, changed = on !== base;
+            return (
+              <label key={g} className={'permcheck' + (changed ? ' chg' : '')}>
+                <input type="checkbox" checked={on} onChange={(e) => setF((s) => ({ ...s, tm: { ...s.tm, [g]: e.target.checked === base ? '' : e.target.checked ? '1' : '0' } }))} />
+                <span>{l}</span>{changed && <small className="tag w">ปรับเฉพาะบัญชีนี้</small>}
               </label>
             );
           })}
