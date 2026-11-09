@@ -273,3 +273,16 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--dn)!import
 @media(min-width:601px){.acct[open]::before{display:none}.acctmenu{position:absolute;left:auto;right:0;top:calc(100% + 8px);width:auto;min-width:240px;max-height:none;z-index:80}}
 
 .lb-bad{display:grid;gap:10px;place-items:center;text-align:center;color:#fff;padding:30px 18px;max-width:420px}.lb-bad .mu{color:#cbd5d1}
+
+/* ===== ช่องมุมถ่ายภาพ (6 มุม × 3 รูป + Vortex) ===== */
+.angle{margin:12px 0;padding:10px 12px;border:1px solid var(--bd,#dfe6ee);border-radius:12px;background:var(--bg,#fff)}
+.slots{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:8px}
+.sl{display:flex;flex-direction:column;gap:6px;min-width:0}
+.sl-t{display:flex;flex-direction:column;line-height:1.25}.sl-t b{font-size:14px}.sl-t .mu{font-size:12px}
+.sl-add,.sl-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:112px;border:2px dashed var(--bd,#c9d3df);border-radius:10px;cursor:pointer;color:var(--mu,#667);font-size:13px;text-align:center}
+.sl-add span{font-size:24px;line-height:1}.sl-add:hover,.sl-add:focus-within{border-color:var(--pr,#2f6feb);color:var(--pr,#2f6feb)}
+.sl-empty{cursor:default;opacity:.5}
+.sl .up-item img,.sl .up-item video{width:100%;aspect-ratio:1/1;object-fit:cover}
+.guide{margin:6px 0 10px}.guide summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center}.guide img{max-width:100%;border-radius:10px;border:1px solid var(--bd,#dfe6ee)}
+.slot-h{margin:12px 0 4px;font-weight:600;font-size:14px}
+@media(max-width:900px){.slots{grid-template-columns:repeat(2,minmax(0,1fr))}}

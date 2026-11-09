@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { D, bytes } from '../lib/client.js';
-import { groupLabel, roundNo } from '../lib/fields.js';
+import { groupLabel, roundNo, slotBucket, slotLabel, slotOrder } from '../lib/fields.js';
 
 const GROUP_ORDER = ['front', 'left', 'right', 'single'];
 
@@ -20,7 +20,7 @@ export function buildSections(records, media) {
     s.groups.get(m.group).push(m);
   }
   return [...secs.values()]
-    .map((s) => ({ ...s, groups: [...s.groups.entries()].sort((a, b) => GROUP_ORDER.indexOf(a[0]) - GROUP_ORDER.indexOf(b[0])).map(([g, items]) => ({ key: s.key + '/' + g, g, label: groupLabel(g), items: items.sort((a, b) => a.name.localeCompare(b.name)) })) }))
+    .map((s) => ({ ...s, groups: [...s.groups.entries()].sort((a, b) => GROUP_ORDER.indexOf(a[0]) - GROUP_ORDER.indexOf(b[0])).map(([g, items]) => ({ key: s.key + '/' + g, g, label: groupLabel(g), items: items.sort((a, b) => slotOrder(a) - slotOrder(b) || a.name.localeCompare(b.name)) })) }))
     .map((s) => ({ ...s, count: s.groups.reduce((n, g) => n + g.items.length, 0) }))
     .sort((a, b) => a.round - b.round || (a.day0 === b.day0 ? a.date.localeCompare(b.date) : a.day0 ? -1 : 1));
 }
@@ -34,6 +34,7 @@ function Thumb({ m, i, onOpen }) {
         {m.kind === 'video' && <span className="play">▶</span>}
         <span className="no">#{i + 1}</span>
       </button>
+      {slotLabel(m.slot, m.kind) && <figcaption className="mu" style={{ fontSize: 11, textAlign: 'center', marginTop: 2 }}>{slotLabel(m.slot, m.kind)}</figcaption>}
     </figure>
   );
 }
@@ -79,7 +80,7 @@ function Lightbox({ items, start, onClose }) {
       {items.length > 1 && <button className="lb-nav l" onClick={() => move(-1)} aria-label="ก่อนหน้า">‹</button>}
       <div className="lightbox-panel">
         <LbMedia key={m.id} m={m} zoom={zoom} setZoom={setZoom} />
-        <div className="lightbox-caption">{i + 1}/{items.length} · {m.name} · {bytes(m.size)}· <a href={`/api/media/${m.id}?download=1`} style={{ color: '#9be7c8' }}>⬇ ดาวน์โหลด</a>{m.drive && <> · <a href={m.drive} target="_blank" rel="noopener noreferrer" style={{ color: '#9be7c8' }}>เปิดใน Drive</a></>}</div>
+        <div className="lightbox-caption">{i + 1}/{items.length} · {slotLabel(m.slot, m.kind) ? slotLabel(m.slot, m.kind) + ' · ' : ''}{m.name} · {bytes(m.size)}· <a href={`/api/media/${m.id}?download=1`} style={{ color: '#9be7c8' }}>⬇ ดาวน์โหลด</a>{m.drive && <> · <a href={m.drive} target="_blank" rel="noopener noreferrer" style={{ color: '#9be7c8' }}>เปิดใน Drive</a></>}</div>
         <div className="lb-hint">{m.kind === 'image' ? (zoom ? 'แตะที่รูปเพื่อย่อกลับ · เลื่อนดูส่วนต่างๆ ของรูปได้' : 'แตะที่รูปเพื่อซูม') : ''}{items.length > 1 && ' · ปัดซ้าย/ขวาเพื่อเลื่อนรูป'}</div>
         {items.length > 1 && (
           <div className="lb-strip" role="tablist" aria-label="รูปทั้งหมดในกลุ่ม">
@@ -104,7 +105,18 @@ export default function MediaViewer({ records, media }) {
   const picked = pick.map((k) => allGroups.find((g) => g.key === k)).filter(Boolean);
   const togglePick = (k) => setPick((p) => (p.includes(k) ? p.filter((x) => x !== k) : p.length >= 2 ? [p[1], k] : [...p, k]));
 
-  const grid = (g) => <div className="imgs">{g.items.map((m, i) => <Thumb key={m.id} m={m} i={i} onOpen={(x) => setLb({ items: g.items, i: x })} />)}</div>;
+  // แบ่งหัวข้อตามมุมถ่ายภาพ (ข้อมูลเก่าที่ไม่ระบุมุมแสดงรวมกันเหมือนเดิม)
+  const grid = (g) => {
+    const buckets = [];
+    for (const m of g.items) { const [k, label] = slotBucket(m); let b = buckets.find((x) => x.k === k); if (!b) buckets.push((b = { k, label, list: [] })); b.list.push(m); }
+    const plain = buckets.length === 1 && buckets[0].k === 'other';
+    return buckets.map((b) => (
+      <div key={b.k}>
+        {!plain && <div className="slot-h">{b.label} <span className="mu" style={{ fontWeight: 400 }}>({b.list.length})</span></div>}
+        <div className="imgs">{b.list.map((m) => { const i = g.items.indexOf(m); return <Thumb key={m.id} m={m} i={i} onOpen={(x) => setLb({ items: g.items, i: x })} />; })}</div>
+      </div>
+    ));
+  };
   return (
     <>
       <div className="tb">

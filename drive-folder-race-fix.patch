@@ -1,0 +1,48 @@
+diff --git a/lib/drive.js b/lib/drive.js
+index d0fe238..2c91942 100644
+--- a/lib/drive.js
++++ b/lib/drive.js
+@@ -16,22 +16,34 @@ export const safeName = (s) => String(s || '').trim().replace(/[\\/:*?"<>|]/g, '
+ const safeFolder = (s) => String(s || '').trim().replace(/[\\/:*?"<>|]/g, '_').slice(0, 120) || '_';
+ 
+ /* ---------- โฟลเดอร์ (เก็บ ID ไว้ในชีต Folders เพื่อไม่ต้องค้นหา Drive ซ้ำ และไม่สร้างโฟลเดอร์ซ้ำ) ---------- */
++// กันซ้ำ 3 ชั้น: (1) process เดียวกันแชร์คำขอที่กำลังสร้าง (2) ก่อนสร้างค้นใน Drive ก่อน
++// (3) หลังสร้างค้นอีกรอบ: ถ้ามีหลาย instance สร้างพร้อมกัน ทุกฝ่ายเลือก "ตัวที่สร้างก่อนสุด" ตัวเดียว แล้วย้ายตัวที่เกินลงถังขยะ
+ const inflight = (globalThis.__beqFolders ||= new Map());
++
++async function findFolder(name, parent) {
++  const q = `name='${name.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}' and '${parent || 'root'}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
++  const found = await gjson(`${API}/files?fields=files(id,createdTime)&orderBy=createdTime&pageSize=20&supportsAllDrives=true&includeItemsFromAllDrives=true&q=${encodeURIComponent(q)}`, undefined, 'Google Drive');
++  return (found.files || []).sort((a, b) => (a.createdTime || '').localeCompare(b.createdTime || '') || a.id.localeCompare(b.id))[0]?.id;
++}
++
+ function ensureFolder(key, name, parent) {
+   if (!inflight.has(key)) {
+     const p = (async () => {
+       const known = await folderGet(key);
+       if (known) return known;
+-      // กันโฟลเดอร์ซ้ำ: ถ้ามีโฟลเดอร์ชื่อเดียวกันใต้โฟลเดอร์แม่นี้อยู่แล้ว (เช่น สร้างโดยอีก instance ของ server) ให้ใช้ตัวเดิม
+-      {
+-        const q = `name='${name.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}' and '${parent || 'root'}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+-        const found = await gjson(`${API}/files?fields=files(id,createdTime)&orderBy=createdTime&pageSize=5&supportsAllDrives=true&includeItemsFromAllDrives=true&q=${encodeURIComponent(q)}`, undefined, 'Google Drive');
+-        if (found.files?.length) { await folderSet(key, found.files[0].id); return found.files[0].id; }
++      let id = await findFolder(name, parent); // มีอยู่แล้ว (เช่น อีก instance สร้างไว้ หรือแคชชีตยังไม่อัปเดต) ให้ใช้ตัวเดิม
++      if (!id) {
++        const f = await gjson(`${API}/files?fields=id&supportsAllDrives=true`, { method: 'POST', headers: JSON_H,
++          body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', ...(parent ? { parents: [parent] } : {}) }) }, 'Google Drive');
++        const oldest = await findFolder(name, parent);
++        if (oldest && oldest !== f.id) {
++          await gfetch(`${API}/files/${f.id}?supportsAllDrives=true`, { method: 'PATCH', headers: JSON_H, body: JSON.stringify({ trashed: true }) })
++            .catch((e) => console.error('[drive] ย้ายโฟลเดอร์ซ้ำลงถังขยะไม่สำเร็จ', e.message));
++          id = oldest;
++        } else id = f.id;
+       }
+-      const f = await gjson(`${API}/files?fields=id&supportsAllDrives=true`, { method: 'POST', headers: JSON_H,
+-        body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', ...(parent ? { parents: [parent] } : {}) }) }, 'Google Drive');
+-      await folderSet(key, f.id);
+-      return f.id;
++      await folderSet(key, id);
++      return id;
+     })().catch((e) => { inflight.delete(key); throw e; });
+     inflight.set(key, p);
+   }
