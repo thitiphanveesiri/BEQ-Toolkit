@@ -311,9 +311,9 @@ export default function CaseForm({ formType }) {
     const n = files.filter((f) => f.group === g[0] && f.slot?.startsWith(a.id + '-')).length;
     return (
       <div className="angle" key={a.id}>
-        <div className="row sp" style={{ gap: 8 }}>
+        <div className="angle-h">
           <b>{a.no}. {a.label} <span className="mu" style={{ fontWeight: 400 }}>{n}/{a.slots.length} รูป</span></b>
-          {phase === 'edit' && <label className="btn s sm">เลือกหลายรูปพร้อมกัน<input type="file" accept={ACCEPT_IMG} multiple hidden onChange={(e) => { fillAngle(g[0], a, e.target.files); e.target.value = ''; }} /></label>}
+          {phase === 'edit' && <label className="btn multi">📷 กดปุ่มนี้เพื่อเลือกหลายรูปพร้อมกัน<input type="file" accept={ACCEPT_IMG} multiple hidden onChange={(e) => { fillAngle(g[0], a, e.target.files); e.target.value = ''; }} /></label>}
         </div>
         <div className="slots">{a.slots.map((s) => slotTile(g, a, s))}</div>
       </div>

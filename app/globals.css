@@ -273,3 +273,20 @@ input[aria-invalid=true],select[aria-invalid=true]{border-color:var(--dn)!import
 @media(min-width:601px){.acct[open]::before{display:none}.acctmenu{position:absolute;left:auto;right:0;top:calc(100% + 8px);width:auto;min-width:240px;max-height:none;z-index:80}}
 
 .lb-bad{display:grid;gap:10px;place-items:center;text-align:center;color:#fff;padding:30px 18px;max-width:420px}.lb-bad .mu{color:#cbd5d1}
+
+/* ===== ช่องมุมถ่ายภาพ (6 มุม × 3 รูป + Vortex) ===== */
+.angle{margin:12px 0;padding:12px;border:1px solid var(--bd,#dfe6ee);border-radius:12px;background:var(--bg,#fff)}
+.angle-h{display:flex;flex-direction:column;gap:8px}
+.btn.multi{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:44px;padding:8px 14px;font-size:14px;font-weight:700;text-align:center;background:var(--pr);color:var(--pt,#fff);border:0;white-space:normal}
+.btn.multi:hover{filter:brightness(1.08)}
+.slots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+.sl{display:flex;flex-direction:column;gap:6px;min-width:0;padding:8px;border:1px solid var(--bd,#dfe6ee);border-radius:12px;background:var(--sf,transparent)}
+.sl.has{border-color:var(--pr)}
+.sl-t{display:flex;flex-direction:column;line-height:1.25}.sl-t b{font-size:14px}.sl-t .mu{font-size:12px}
+.sl-add,.sl-empty{box-sizing:border-box;width:100%;align-self:stretch;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:112px;margin:0;border:2px dashed var(--bd,#c9d3df);border-radius:10px;cursor:pointer;color:var(--mu,#667);font-size:13px;font-weight:600;text-align:center}
+.sl-add span{font-size:26px;line-height:1}.sl-add:hover,.sl-add:focus-within{border-color:var(--pr,#2f6feb);color:var(--pr,#2f6feb);background:var(--ac)}
+.sl-empty{cursor:default;opacity:.5}
+.sl .up-item img,.sl .up-item video{width:100%;aspect-ratio:1/1;object-fit:cover}
+.guide{margin:6px 0 10px}.guide summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center}.guide img{max-width:100%;border-radius:10px;border:1px solid var(--bd,#dfe6ee)}
+.slot-h{margin:12px 0 4px;font-weight:600;font-size:14px}
+
