@@ -137,7 +137,7 @@ export default function CaseForm({ formType }) {
     return () => clearTimeout(t);
   }, [v?.opd, formType, toast, opt]);
 
-  if (!perms.fillForm) return <Denied />;
+  if (!(formType === 'day0' ? perms.fillDay0 : perms.fillCase)) return <Denied />;
   if (!v) return <Spinner />;
   const set = (k, val) => {
     // เปลี่ยนประเภทหัตถการ → ล้างช่องย่อยของประเภทเดิม
@@ -361,7 +361,7 @@ export default function CaseForm({ formType }) {
           <div className="card sec" data-s={i} key={s[0]}>
             <h2>{s[0]}</h2>
             <div className="f2">{s[1].filter((k) => isShown(k, v) && (k !== 'round' || showRound)).map((k) => <Field key={k} locked={locked.has(k) || (formType === 'case' && k === 'cell')} note={k === 'round' ? roundNote : ''} k={k} formType={formType} minDate={minDateFor(k, formType, today())} value={v[k] ?? ''} onChange={set} options={opt} error={errs[k]} />)}</div>
-            {i === steps.length - 1 && <><h3 style={{ margin: '16px 0 4px' }}>ข้อมูลเพิ่มเติม</h3><label htmlFor="f-note">หมายเหตุ</label><textarea id="f-note" rows={2} value={v.note} onChange={(e) => set('note', e.target.value)} maxLength={1000} /></>}
+            {s[0] === 'หัตถการ' && <><h3 style={{ margin: '16px 0 4px' }}>ข้อมูลเพิ่มเติม</h3><label htmlFor="f-note">หมายเหตุ</label><textarea id="f-note" rows={2} value={v.note} onChange={(e) => set('note', e.target.value)} maxLength={1000} /></>}
           </div>
         ))}
         {canUpload && (

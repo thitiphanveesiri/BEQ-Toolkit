@@ -3,8 +3,10 @@ import { addRecord, listRecords, updateRecord } from '../../../lib/db.js';
 import { cleanRecord, findDuplicate, findDay0, latestRound, lockBasics, existingCell, getFormOptions } from '../../../lib/records.js';
 import { prepareFolders } from '../../../lib/drive.js';
 import { AppError } from '../../../lib/errors.js';
+import { canFill } from '../../../lib/roles.js';
 
 export const POST = route({ perm: 'fillForm' }, async ({ req, user, body }) => {
+  if (!canFill(user, body?.formType)) throw new AppError(403, 'บัญชีนี้ไม่มีสิทธิ์กรอกฟอร์มนี้');
   // ฟอร์ม F/U: ช่องเซลล์ล็อก — ใช้เซลล์เดิมของคนไข้ (ไม่รับค่าจากฟอร์ม)
   const input = body?.formType === 'case' ? { ...body?.data, cell: undefined } : body?.data;
   const rec = await lockBasics(cleanRecord(body?.formType, input, await getFormOptions(body?.formType)));

@@ -2,13 +2,13 @@ import { route, audit } from '../../../lib/api.js';
 import { getOptions, setOptions } from '../../../lib/db.js';
 import { getFormOptions } from '../../../lib/records.js';
 import { OPTION_GROUPS } from '../../../lib/fields.js';
-import { can } from '../../../lib/roles.js';
+import { can, canFill } from '../../../lib/roles.js';
 import { AppError } from '../../../lib/errors.js';
 
 // ?formType=case|day0 (เฉพาะผู้มีสิทธิ์กรอกฟอร์ม) จะได้รายชื่อทีมงานตามบทบาทมาด้วย: tDoc, tCell, tPh, tCk
 export const GET = route({}, async ({ req, user }) => {
   const ft = new URL(req.url).searchParams.get('formType');
-  if (ft && ['case', 'day0'].includes(ft) && can(user.role, 'fillForm')) return { options: await getFormOptions(ft) };
+  if (ft && ['case', 'day0'].includes(ft) && canFill(user, ft)) return { options: await getFormOptions(ft) };
   return { options: await getOptions() };
 });
 

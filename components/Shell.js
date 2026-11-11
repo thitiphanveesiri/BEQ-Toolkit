@@ -9,8 +9,8 @@ import { api, clearApiCache } from '../lib/client.js';
 const NAV = [
   { h: 'MAIN', items: [{ href: '/dashboard', l: '▦ Dashboard', ic: '▦', s: 'หน้าหลัก' }] },
   { h: 'PATIENT MANAGEMENT', items: [
-    { href: '/new/case', l: '👤 คนไข้ติดตามผลตามระยะ Follow-Up(F/U)', ic: '👤', s: 'F/U', p: 'fillForm' },
-    { href: '/new/day0', l: '🖼️ คนไข้เข้ารับบริการ(DAY 0)', ic: '🖼️', s: 'Day 0', p: 'fillForm' },
+    { href: '/new/case', l: '👤 คนไข้ติดตามผลตามระยะ Follow-Up(F/U)', ic: '👤', s: 'F/U', p: 'fillCase' },
+    { href: '/new/day0', l: '🖼️ คนไข้เข้ารับบริการ(DAY 0)', ic: '🖼️', s: 'Day 0', p: 'fillDay0' },
     { href: '/search', l: '🔎 ค้นหาคนไข้', ic: '🔎', s: 'ค้นหา', p: 'viewImages' },
     { href: '/reports', l: '📊 รายงาน Dashboard', ic: '📊', s: 'รายงาน', p: 'viewStats' },
   ] },

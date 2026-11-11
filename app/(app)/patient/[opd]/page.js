@@ -10,7 +10,7 @@ import { F, fmtOpd, procLabel, roundNo, labelOf } from '../../../../lib/fields.j
 
 // ข้อมูลประจำตัวคนไข้ (ด้านบน) และข้อมูลของแต่ละครั้งที่ส่งฟอร์ม (ในแต่ละ dropdown)
 const SHOW = ['opd', 'name', 'gender', 'age', 'nat', 'round', 'plant', 'uploaded', 'procType', 'area', 'hairMethod', 'tool', 'inj', 'ct', 'visitPeriod', 'cell', 'doc', 'ph', 'ck'];
-const REC_SHOW = ['date', 'plantDate', 'uploaded', 'round', 'procType', 'area', 'hairMethod', 'tool', 'inj', 'ct', 'visitPeriod', 'cell', 'doc', 'ph', 'ck'];
+const REC_SHOW = ['date', 'plantDate', 'uploaded', 'round', 'procType', 'area', 'hairMethod', 'tool', 'inj', 'ct', 'visitPeriod', 'seeDoctor', 'cell', 'doc', 'ph', 'ck'];
 const FU_TXT = { soon: 'ใกล้ถึงนัด', today: 'ถึงนัดวันนี้', overdue: 'เลยนัดแล้ว', done: 'มา F/U แล้ว', future: 'ยังไม่ถึงนัด', missed: 'เลยกำหนด' };
 // แถบนัด F/U ตามระยะ 1/3/6/9/12 เดือน (นับจากวันที่มาปลูก) — ระยะที่ใกล้ถึง/เลยนัดจะเน้นสี
 const FollowUps = ({ list }) => {

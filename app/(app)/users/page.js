@@ -6,7 +6,7 @@ import { api, useApi } from '../../../lib/client.js';
 import { ROLES, OVERRIDABLE, DOC_TITLES, can } from '../../../lib/roles.js';
 import { TEAM_LABELS, inTeamByRole } from '../../../lib/fields.js';
 
-const PERM_LABELS = [['fillForm', 'กรอก/ส่งฟอร์ม'], ['upload', 'อัปโหลดรูป/วิดีโอ'], ['viewImages', 'ดูรูป/วิดีโอ'], ['viewStats', 'ดูรายงาน'], ['editData', 'แก้ไขข้อมูลคนไข้'], ['manage', 'จัดการระบบ']];
+const PERM_LABELS = [['fillCase', 'กรอกฟอร์ม F/U'], ['fillDay0', 'กรอกฟอร์ม Day 0'], ['upload', 'อัปโหลดรูป/วิดีโอ'], ['viewImages', 'ดูรูป/วิดีโอ'], ['viewStats', 'ดูรายงาน'], ['editData', 'แก้ไขข้อมูลคนไข้'], ['manage', 'จัดการระบบ']];
 
 function Editor({ u, onClose, onSaved }) {
   const toast = useToast(), isNew = !u;

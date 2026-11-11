@@ -14,7 +14,7 @@ export default function Dashboard() {
   const { data: rem } = useApi(perms.viewImages ? '/api/reminders' : null);
   const { data: recent, loading } = useApi(perms.viewImages ? '/api/patients?q=' : null);
   const menus = [
-    perms.fillForm && ['/new/case', '👤', 'คนไข้ติดตามผลตามระยะ Follow-Up(F/U)'], perms.fillForm && ['/new/day0', '🖼️', 'คนไข้เข้ารับบริการ(DAY 0)'],
+    perms.fillCase && ['/new/case', '👤', 'คนไข้ติดตามผลตามระยะ Follow-Up(F/U)'], perms.fillDay0 && ['/new/day0', '🖼️', 'คนไข้เข้ารับบริการ(DAY 0)'],
     perms.viewImages && ['/search', '🔎', 'ค้นหาคนไข้'], perms.viewStats && ['/reports', '📊', 'รายงาน Dashboard'],
     perms.manage && ['/users', '👥', 'จัดการผู้ใช้'], perms.manage && ['/forms', '🧩', 'จัดการฟอร์ม'],
   ].filter(Boolean);
