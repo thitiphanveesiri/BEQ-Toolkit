@@ -70,7 +70,7 @@ export default function Shell({ user, perms, mock, children }) {
         <div className={'shell' + (nav ? ' nav-open' : '')}>
           <div className="scrim" onClick={() => setNav(false)} />
           <aside>
-            <div className="logo"><img className="brand-mark" src="/logo.jpg" alt="" /><div>BEQ Group<small>TOOLKIT</small></div></div>
+            <div className="logo"><img className="brand-mark" src="/logo-mark.jpg" alt="" /><div>BEQ HAIR CLINIC<small>TOOLKIT</small></div></div>
             {groups.map((g) => (
               <div key={g.h} style={{ display: 'contents' }}>
                 <h6>{g.h}</h6>

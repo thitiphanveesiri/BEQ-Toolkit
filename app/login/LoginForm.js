@@ -15,10 +15,10 @@ export default function LoginForm({ mock }) {
   return (
     <div className="split">
       <div className="hero">
-        <small>BEQ GROUP · PATIENT TOOLKIT</small>
-        <img className="brand-logo" src="/logo.jpg" alt="BEQ Group" />
-        <h1>BEQ Group</h1>
-        <p>BEQ Group Toolkit<br />ระบบจัดการภาพคนไข้และติดตามผล</p>
+        <small>BEQ HAIR CLINIC · PATIENT TOOLKIT</small>
+        <img className="brand-logo" src="/logo.jpg" alt="BEQ HAIR CLINIC" />
+        <h1>BEQ HAIR CLINIC</h1>
+        <p>BEQ HAIR CLINIC Toolkit<br />ระบบจัดการภาพคนไข้และติดตามผล</p>
       </div>
       <div className="login">
         <h1>เข้าสู่ระบบ</h1>
