@@ -1,0 +1,13 @@
+diff --git a/lib/fields.js b/lib/fields.js
+index 3ffa37d..333805b 100644
+--- a/lib/fields.js
++++ b/lib/fields.js
+@@ -92,7 +92,7 @@ export const F = {
+   inj: { l: 'Rejuvenation', t: 'multi', og: 'inj', req: 1 },
+   ct: { l: 'ประเภทเคส', t: 'select', og: 'ct' },
+   seeDoctor: { l: 'การพบแพทย์', t: 'pills', o: SEE_DOCTOR, req: 1, blank: 1, hint: 'เลือกว่าคนไข้มา F/U ครั้งนี้ได้พบแพทย์หรือไม่' }, // ฟอร์ม F/U เท่านั้น
+-  visitPeriod: { l: 'ระยะที่เข้ามาตรวจ', t: 'period', req: 1, hint: 'ระบุตัวเลขและหน่วย เช่น 13 วัน, 5 เดือน' },
++  visitPeriod: { l: 'ระยะที่เข้ามาตรวจ', t: 'period', hint: 'ระบุตัวเลขและหน่วย เช่น 13 วัน, 5 เดือน' },
+   cell: { l: 'เซลล์', t: 'select', og: 'tCell', blank: 1, req: 1, empty: 'ยังไม่มีผู้ใช้บทบาท “เซลล์” — ให้ผู้ดูแลเพิ่มที่เมนู “จัดการผู้ใช้”' },
+   doc: { l: 'แพทย์เจ้าของเคส', t: 'select', og: 'tDoc', blank: 1, req: 1, empty: 'ยังไม่มีผู้ใช้บทบาท “แพทย์” — ให้ผู้ดูแลเพิ่มที่เมนู “จัดการผู้ใช้”' },
+   ph: { l: 'ใครถ่าย', t: 'select', og: 'tPh', blank: 1, req: 1, empty: 'ยังไม่มีผู้ใช้ในบทบาทที่เลือกได้ — ให้ผู้ดูแลเพิ่มที่เมนู “จัดการผู้ใช้”' },

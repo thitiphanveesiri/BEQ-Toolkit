@@ -1,0 +1,97 @@
+diff --git a/components/CaseForm.js b/components/CaseForm.js
+index 9b279d6..d4de4e4 100644
+--- a/components/CaseForm.js
++++ b/components/CaseForm.js
+@@ -115,7 +115,7 @@ export default function CaseForm({ formType }) {
+     if (wasLocked.current) { // เปลี่ยน HN: ปลดล็อกและล้างข้อมูลพื้นฐานของคนไข้คนก่อน
+       wasLocked.current = false; filledFor.current = '';
+       setLocked(new Set()); setMeta(null);
+-      setV((p) => ({ ...p, ...Object.fromEntries(BASIC_LOCK.map((k) => [k, k === 'gender' ? GENDERS[0] : ''])), round: ROUNDS[0] }));
++      setV((p) => ({ ...p, ...Object.fromEntries(BASIC_LOCK.map((k) => [k, k === 'gender' ? GENDERS[0] : k === 'plantDate' ? today() : ''])), round: ROUNDS[0] }));
+     }
+     if (!opd || !OPD_RE.test(opd)) return;
+     const t = setTimeout(async () => {
+@@ -367,7 +367,7 @@ export default function CaseForm({ formType }) {
+         {canUpload && (
+           <div className="card sec" data-s={imageStep}>
+             <h2>{formType === 'day0' ? 'ส่งรูปภาพตามขั้นตอน' : 'ส่งรูปภาพ'} <span className="req">*</span></h2>
+-            <p className="mu">ถ่ายครบ 6 มุม มุมละ 3 รูป (ด้านหน้า (ตรง) เพิ่มรูปที่ 4 = Vortex) · แต่ละรูปมี 3 ระยะกล้อง: <b>0°</b> กล้องขนานกับหน้า · <b>45°</b> มุมบน · <b>90°</b> จากด้านบน · เพิ่มภาพอื่นได้อีก {MAX_EXTRA} ภาพ และวิดีโอ {MAX_VIDEOS} คลิปต่อช่อง</p>
++            <p className="mu">ถ่ายครบ 6 มุม มุมละ 3 รูป (ด้านหน้า (ตรง) และด้านหลัง เพิ่มรูปที่ 4 = Vortex) · แต่ละรูปมี 3 ระยะกล้อง: <b>0°</b> กล้องขนานกับหน้า · <b>45°</b> มุมบน · <b>90°</b> จากด้านบน · เพิ่มภาพอื่นได้อีก {MAX_EXTRA} ภาพ และวิดีโอ {MAX_VIDEOS} คลิปต่อช่อง</p>
+             <p className="mu" style={{ marginTop: 0 }}>ต้องเลือกอย่างน้อย 1 ไฟล์ก่อนบันทึกเคส (ไม่จำเป็นต้องครบทุกมุม) · รูปจะถูกย่อให้อัตโนมัติ · รองรับวิดีโอ MP4/MOV</p>
+             <details className="guide"><summary>📖 ดูตัวอย่างภาพถ่ายครบทุกมุม</summary><a href="/photo-guide.jpg" target="_blank" rel="noopener noreferrer"><img src="/photo-guide.jpg" alt="ตัวอย่างภาพถ่ายคนไข้ปลูกผมครบทุกมุมที่ต้องการ: ด้านหน้า (ตรง), มุมหน้าซ้าย/ขวา 45°, ด้านหลัง, มุมหลังซ้าย/ขวา 45° แต่ละมุมมี 0°, 45°, 90°" loading="lazy" /></a><p className="mu" style={{ fontSize: 12 }}>แตะรูปเพื่อเปิดขนาดเต็ม</p></details>
+             {photoErr && <p className="fe" role="alert">{photoErr}</p>}
+diff --git a/lib/fields.js b/lib/fields.js
+index f2d9453..3ffa37d 100644
+--- a/lib/fields.js
++++ b/lib/fields.js
+@@ -1,7 +1,7 @@
+ // นิยามฟิลด์ฟอร์มตาม prototype — ใช้ร่วมกันทั้ง client และ server
+ export const GENDERS = ['ชาย', 'หญิง'];
+ // ข้อมูลพื้นฐานของคนไข้: ถ้า HN นี้เคยมีข้อมูลแล้ว ฟอร์มจะเติมให้และล็อกไม่ให้แก้ (แก้ได้ที่หน้าข้อมูลคนไข้โดยผู้มีสิทธิ์)
+-export const BASIC_LOCK = ['fname', 'mname', 'lname', 'gender', 'age', 'nat'];
++export const BASIC_LOCK = ['fname', 'mname', 'lname', 'gender', 'age', 'nat', 'plantDate']; // plantDate = วันที่มาปลูก (ฟอร์ม F/U) ล็อกตามวันที่ของ Day 0
+ 
+ export const OPTION_GROUPS = {
+   hairMethod: 'วิธีการปลูก (Hair Transplantation)',
+@@ -81,7 +81,7 @@ export const F = {
+   gender: { l: 'เพศ', t: 'pills', o: GENDERS, req: 1 },
+   age: { l: 'อายุ (ปี)', t: 'text', num: 1, ph: 'เช่น 35', req: 1 },
+   // Day 0: เรียก "วันที่มาปลูก" และเลือกย้อนหลังได้ไม่เกิน 1 วัน (วันนี้และอนาคตเลือกได้) — ตรวจซ้ำที่ server ตอนบันทึกเคสใหม่
+-  date: { l: 'วันที่เข้ามา', t: 'date', req: 1, ll: { day0: 'วันที่มาปลูก' }, minBack: { day0: 1 } },
++  date: { l: 'วันที่เข้ามารับบริการ', t: 'date', req: 1, ll: { day0: 'วันที่มาปลูก' }, minBack: { day0: 1 } },
+   plantDate: { l: 'วันที่ปลูก', t: 'date', req: 1 },
+   nat: { l: 'สัญชาติ', t: 'select', og: 'nat', req: 1 },
+   round: { l: 'ครั้งที่เข้ามารับหัตถการ', t: 'pills', o: ROUNDS, req: 1, hintBy: { day0: 'ไม่ใช่การมา F/U — ครั้งที่ 1 = อัปเดต Day 0 เดิม, ครั้งที่ 2/3 = มาทำหัตถการรอบใหม่', case: 'คนไข้นี้มีหลายรอบ — เลือกรอบที่มา F/U' } },
+@@ -122,16 +122,17 @@ export const groupsFor = (formType) => (formType === 'day0' ? GROUPS_DAY0 : [['s
+ export const groupLabel = (g) => ([...GROUPS_DAY0, ['single', 'รูปภาพ / วิดีโอ']].find((x) => x[0] === g) || [0, g])[1];
+ 
+ // ---------- มุมถ่ายภาพ: ทุกช่องอัปโหลด (3 ช่องของ DAY 0 และ 1 ช่องของ F/U) ใช้ชุดเดียวกัน ----------
+-// 6 มุม × 3 รูป (0° กล้องขนานกับหน้า · 45° มุมบน · 90° จากด้านบน) โดยด้านหน้า (ตรง) มีรูปที่ 4 คือ Vortex
++// 6 มุม × 3 รูป (0° กล้องขนานกับหน้า · 45° มุมบน · 90° จากด้านบน) โดยด้านหน้า (ตรง) และด้านหลัง มีรูปที่ 4 คือ Vortex
+ // + ภาพเพิ่มเติมได้อีก 12 ภาพ + วิดีโอ 10 คลิป (วิดีโอไม่ผูกมุม)
+ export const MAX_EXTRA = 12, MAX_VIDEOS = 10;
+ export const EXTRA_SLOT = 'extra', VIDEO_SLOT = 'video';
+ const STD = [{ k: '0', t: '0°', hint: 'กล้องขนานกับหน้า' }, { k: '45', t: '45°', hint: 'มุมบน' }, { k: '90', t: '90°', hint: 'จากด้านบน' }];
++const VORTEX = { k: 'vortex', t: 'Vortex', hint: 'จุดหมุนของเส้นผมบริเวณกระหม่อม — ถ่ายให้เห็นทิศทางการหมุนของเส้นผม' };
+ export const ANGLES = [
+-  { id: 'front', no: 1, label: 'ด้านหน้า (ตรง)', short: 'หน้าตรง', slots: [...STD, { k: 'vortex', t: 'Vortex', hint: 'จุดหมุนของเส้นผมบริเวณกระหม่อม — ถ่ายให้เห็นทิศทางการหมุนของเส้นผม' }] },
++  { id: 'front', no: 1, label: 'ด้านหน้า (ตรง)', short: 'หน้าตรง', slots: [...STD, VORTEX] },
+   { id: 'fl', no: 2, label: 'มุมหน้าด้านซ้าย (หันซ้าย 45°)', short: 'หน้า-ซ้าย45', slots: STD },
+   { id: 'fr', no: 3, label: 'มุมหน้าด้านขวา (หันขวา 45°)', short: 'หน้า-ขวา45', slots: STD },
+-  { id: 'back', no: 4, label: 'ด้านหลัง', short: 'หลัง', slots: STD },
++  { id: 'back', no: 4, label: 'ด้านหลัง', short: 'หลัง', slots: [...STD, VORTEX] },
+   { id: 'bl', no: 5, label: 'มุมหลังด้านซ้าย (หันซ้าย 45°)', short: 'หลัง-ซ้าย45', slots: STD },
+   { id: 'br', no: 6, label: 'มุมหลังด้านขวา (หันขวา 45°)', short: 'หลัง-ขวา45', slots: STD },
+ ];
+diff --git a/lib/records.js b/lib/records.js
+index 425cc52..708d54e 100644
+--- a/lib/records.js
++++ b/lib/records.js
+@@ -120,6 +120,7 @@ export async function autofill(opd) {
+   for (const k of ['fname', 'mname', 'lname', 'gender', 'age', 'plantDate', 'nat', 'ct', 'cell', 'doc']) {
+     const r = recs.find((x) => x[k] && (k !== 'gender' || GENDERS.includes(x[k]))); if (r) out[k] = r[k];
+   }
++  const pd = plantAnchor(recs); if (pd) out.plantDate = pd;
+   // ข้อมูลหัตถการเติมเป็นชุดเดียวจากฟอร์มล่าสุดที่มีประเภทหัตถการ (ข้อมูลเก่าที่ยังไม่มี ให้เดาประเภทจากช่องที่กรอกไว้)
+   const withType = baseline(recs); // หัตถการตั้งต้นของรอบล่าสุด (ไม่ใช่หัตถการเพิ่มเติมของ F/U ครั้งก่อน)
+   if (withType) for (const k of ['procType', ...PROC_DEP_KEYS]) { if (withType[k]) out[k] = withType[k]; }
+@@ -134,9 +135,18 @@ export async function autofill(opd) {
+ }
+ 
+ // HN ที่เคยมีข้อมูลแล้ว: บังคับใช้ข้อมูลพื้นฐานเดิม (ชื่อ เพศ อายุ สัญชาติ) แทนที่ค่าที่ส่งมา — กันการแก้ผ่านฟอร์มโดยตรง
++// วันที่มาปลูก = วันที่ของ Day 0 (ครั้งล่าสุดของคนไข้) — ถ้ายังไม่มี Day 0 ใช้วันที่ปลูกที่เคยกรอกใน F/U
++function plantAnchor(recs) {
++  const d0 = recs.filter((r) => r.formType === 'day0' && r.date);
++  if (d0.length) { const top = Math.max(...d0.map((r) => roundNo(r.round))); return d0.filter((r) => roundNo(r.round) === top).sort(chron)[0].date; }
++  return recs.find((r) => r.plantDate)?.plantDate || '';
++}
+ export async function lockBasics(rec) {
+   const recs = (await listRecords()).filter((r) => r.opd === rec.opd).sort(byLatest);
+-  for (const k of BASIC_LOCK) { const r = recs.find((x) => x[k]); if (r) rec[k] = r[k]; }
++  for (const k of BASIC_LOCK) {
++    if (k === 'plantDate') { if (rec.formType === 'case') { const p = plantAnchor(recs); if (p) rec.plantDate = p; } continue; }
++    const r = recs.find((x) => x[k]); if (r) rec[k] = r[k];
++  }
+   rec.name = [rec.fname, rec.mname, rec.lname].filter(Boolean).join(' ');
+   return rec;
+ }
