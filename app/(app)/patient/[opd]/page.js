@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { useMe, Denied, Spinner } from '../../../../components/Ctx.js';
 import MediaViewer from '../../../../components/MediaViewer.js';
 import RecordEditor from '../../../../components/RecordEditor.js';
-import { useApi, D } from '../../../../lib/client.js';
+import { useApi, D, DT } from '../../../../lib/client.js';
 import { F, fmtOpd, procLabel, roundNo, labelOf } from '../../../../lib/fields.js';
 
 // ข้อมูลประจำตัวคนไข้ (ด้านบน) และข้อมูลของแต่ละครั้งที่ส่งฟอร์ม (ในแต่ละ dropdown)
@@ -27,9 +27,9 @@ const FollowUps = ({ list }) => {
     </div>
   );
 };
-const EXTRA = { proc: 'หัตถการ', plant: 'วันที่มาปลูก', uploaded: 'วันที่อัปโหลด' }; // ช่องที่คำนวณเอง ไม่ได้เก็บเป็นคอลัมน์
+const EXTRA = { proc: 'หัตถการ', plant: 'วันที่มาปลูก(Day0)', uploaded: 'วันที่อัปโหลด' }; // ช่องที่คำนวณเอง ไม่ได้เก็บเป็นคอลัมน์
 const label = (k, ft) => EXTRA[k] || labelOf(k, ft);
-const val = (k, v) => (F[k]?.t === 'date' || k === 'plant' || k === 'uploaded' ? D(v) : v);
+const val = (k, v) => (k === 'uploaded' ? DT(v) : F[k]?.t === 'date' || k === 'plant' ? D(v) : v);
 const Grid = ({ o, keys = SHOW, ft }) => (
   <div className="detail-grid">{keys.filter((k) => o[k] && o[k] !== '—').map((k) => <div key={k}><small>{label(k, ft)}</small><b>{val(k, o[k])}</b></div>)}</div>
 );
