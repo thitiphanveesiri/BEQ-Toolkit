@@ -115,7 +115,7 @@ export default function CaseForm({ formType }) {
     if (wasLocked.current) { // เปลี่ยน HN: ปลดล็อกและล้างข้อมูลพื้นฐานของคนไข้คนก่อน
       wasLocked.current = false; filledFor.current = '';
       setLocked(new Set()); setMeta(null);
-      setV((p) => ({ ...p, ...Object.fromEntries(BASIC_LOCK.map((k) => [k, k === 'gender' ? GENDERS[0] : ''])), round: ROUNDS[0] }));
+      setV((p) => ({ ...p, ...Object.fromEntries(BASIC_LOCK.map((k) => [k, k === 'gender' ? GENDERS[0] : k === 'plantDate' ? today() : ''])), round: ROUNDS[0] }));
     }
     if (!opd || !OPD_RE.test(opd)) return;
     const t = setTimeout(async () => {
@@ -367,7 +367,7 @@ export default function CaseForm({ formType }) {
         {canUpload && (
           <div className="card sec" data-s={imageStep}>
             <h2>{formType === 'day0' ? 'ส่งรูปภาพตามขั้นตอน' : 'ส่งรูปภาพ'} <span className="req">*</span></h2>
-            <p className="mu">ถ่ายครบ 6 มุม มุมละ 3 รูป (ด้านหน้า (ตรง) เพิ่มรูปที่ 4 = Vortex) · แต่ละรูปมี 3 ระยะกล้อง: <b>0°</b> กล้องขนานกับหน้า · <b>45°</b> มุมบน · <b>90°</b> จากด้านบน · เพิ่มภาพอื่นได้อีก {MAX_EXTRA} ภาพ และวิดีโอ {MAX_VIDEOS} คลิปต่อช่อง</p>
+            <p className="mu">ถ่ายครบ 6 มุม มุมละ 3 รูป (ด้านหน้า (ตรง) และด้านหลัง เพิ่มรูปที่ 4 = Vortex) · แต่ละรูปมี 3 ระยะกล้อง: <b>0°</b> กล้องขนานกับหน้า · <b>45°</b> มุมบน · <b>90°</b> จากด้านบน · เพิ่มภาพอื่นได้อีก {MAX_EXTRA} ภาพ และวิดีโอ {MAX_VIDEOS} คลิปต่อช่อง</p>
             <p className="mu" style={{ marginTop: 0 }}>ต้องเลือกอย่างน้อย 1 ไฟล์ก่อนบันทึกเคส (ไม่จำเป็นต้องครบทุกมุม) · รูปจะถูกย่อให้อัตโนมัติ · รองรับวิดีโอ MP4/MOV</p>
             <details className="guide"><summary>📖 ดูตัวอย่างภาพถ่ายครบทุกมุม</summary><a href="/photo-guide.jpg" target="_blank" rel="noopener noreferrer"><img src="/photo-guide.jpg" alt="ตัวอย่างภาพถ่ายคนไข้ปลูกผมครบทุกมุมที่ต้องการ: ด้านหน้า (ตรง), มุมหน้าซ้าย/ขวา 45°, ด้านหลัง, มุมหลังซ้าย/ขวา 45° แต่ละมุมมี 0°, 45°, 90°" loading="lazy" /></a><p className="mu" style={{ fontSize: 12 }}>แตะรูปเพื่อเปิดขนาดเต็ม</p></details>
             {photoErr && <p className="fe" role="alert">{photoErr}</p>}
