@@ -13,6 +13,7 @@
 | เซลล์ (sales) (เห็นเฉพาะฟอร์ม Day 0) | ✓ | | | | |
 | หัวหน้าเซลล์ (sales_lead) (เห็นเฉพาะฟอร์ม Day 0) | ✓ | | | ✓ | |
 | ผู้ตรวจ (checker) | | | ✓ | | |
+| HR (hr) | | | ✓ (ค้นหา ดูรูป และดาวน์โหลดไฟล์) | | |
 
 แก้ตารางได้ที่ `lib/roles.js` (ฝั่ง server ตรวจสิทธิ์ทุก API)
 
@@ -22,7 +23,7 @@
 npm install
 DATA_MODE=mock npm run dev      # เปิด http://localhost:3000
 ```
-มีบัญชีทดลอง `admin / doctor / bt / sales / lead / checker` รหัสผ่าน `demo1234` และข้อมูลสมมติ ข้อมูลเก็บในโฟลเดอร์ `.data` (ใช้ใน production ไม่ได้)
+มีบัญชีทดลอง `admin / doctor / bt / sales / lead / checker / hr` รหัสผ่าน `demo1234` และข้อมูลสมมติ ข้อมูลเก็บในโฟลเดอร์ `.data` (ใช้ใน production ไม่ได้)
 
 ## ตั้งค่า Google (ทำครั้งเดียว)
 

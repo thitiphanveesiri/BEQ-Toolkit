@@ -3,7 +3,7 @@ import PasswordInput from '../../components/PasswordInput.js';
 import { useState } from 'react';
 import { api } from '../../lib/client.js';
 
-const DEMO = [['admin', 'ผู้ดูแล'], ['doctor', 'แพทย์'], ['bt', 'BT'], ['sales', 'เซลล์'], ['lead', 'หัวหน้าเซลล์'], ['checker', 'ผู้ตรวจ']];
+const DEMO = [['admin', 'ผู้ดูแล'], ['doctor', 'แพทย์'], ['bt', 'BT'], ['sales', 'เซลล์'], ['lead', 'หัวหน้าเซลล์'], ['checker', 'ผู้ตรวจ'], ['hr', 'HR']];
 
 export default function LoginForm({ mock }) {
   const [u, setU] = useState(''), [p, setP] = useState(''), [err, setErr] = useState(''), [busy, setBusy] = useState(false);
