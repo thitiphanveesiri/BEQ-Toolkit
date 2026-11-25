@@ -4,7 +4,7 @@ const BIG = 8; // รายการยาวกว่านี้ใช้ช�
 import { F, isReq, fmtDigits, OPD_LEN, PERIOD_RE, PERIOD_UNITS, PERIOD_QUICK, labelOf, splitMulti, MULTI_SEP } from '../lib/fields.js';
 
 // ช่องกรอกตามนิยามใน lib/fields.js (ใช้ทั้งฟอร์มส่งเคสและหน้าแก้ไขของผู้ดูแล)
-export default function Field({ k, value, onChange, options, error, idp = 'f', formType, minDate, locked = false, note }) {
+export default function Field({ k, value, onChange, options, error, idp = 'f', formType, minDate, locked = false, lockNote, note }) {
   const f = F[k], lbl = labelOf(k, formType);
   const [q, setQ] = useState('');
   const [pu, setPu] = useState('เดือน'); // หน่วยที่เลือกของช่องระยะ (ใช้ตอนยังไม่ได้ใส่ตัวเลข)
@@ -54,7 +54,7 @@ export default function Field({ k, value, onChange, options, error, idp = 'f', f
         <input type="search" className="msq" placeholder={`ค้นหา (ทั้งหมด ${list.length} รายการ)`} value={q} onChange={(e) => setQ(e.target.value)} aria-label={'ค้นหา' + lbl} />
         <div className="mslist" role="group" aria-label={lbl} aria-invalid={!!error}>
           {shown.length ? shown.map((z) => (
-            <label className="mrow" key={z}><input type="checkbox" value={z} checked={cur.includes(z)} onChange={() => toggle(z)} /><span>{z}</span></label>
+            <label className="mrow" key={z}><input type="checkbox" value={z} checked={cur.includes(z)} disabled={locked} onChange={() => toggle(z)} /><span>{z}</span></label>
           )) : <p className="mu" style={{ margin: 6 }}>ไม่พบรายการที่ค้นหา</p>}
         </div>
         <p className="mu" style={{ margin: '3px 0 0', fontSize: 12 }}>เลือกได้หลายข้อ · เลือกแล้ว {cur.length} รายการ</p>
@@ -63,7 +63,7 @@ export default function Field({ k, value, onChange, options, error, idp = 'f', f
       <>
         <div className="pills" role="group" aria-label={lbl} aria-invalid={!!error}>
           {list.map((z) => (
-            <label className="pill" key={z}><input type="checkbox" value={z} checked={cur.includes(z)} onChange={() => toggle(z)} /><span>{z}</span></label>
+            <label className="pill" key={z}><input type="checkbox" value={z} checked={cur.includes(z)} disabled={locked} onChange={() => toggle(z)} /><span>{z}</span></label>
           ))}
         </div>
         <p className="mu" style={{ margin: '3px 0 0', fontSize: 12 }}>เลือกได้หลายข้อ</p>
@@ -76,14 +76,14 @@ export default function Field({ k, value, onChange, options, error, idp = 'f', f
     input = (
       <>
         <div className="period">
-          <input id={id} inputMode="numeric" autoComplete="off" maxLength={3} placeholder="ตัวเลข เช่น 13" value={num} aria-invalid={!!error}
+          <input id={id} inputMode="numeric" autoComplete="off" maxLength={3} placeholder="ตัวเลข เช่น 13" value={num} aria-invalid={!!error} readOnly={locked}
             onChange={(e) => set2(e.target.value.replace(/\D/g, '').slice(0, 3), unit)} />
-          <select aria-label="หน่วยของระยะเวลา" value={unit} onChange={(e) => { setPu(e.target.value); set2(num, e.target.value); }}>
+          <select aria-label="หน่วยของระยะเวลา" value={unit} disabled={locked} onChange={(e) => { setPu(e.target.value); set2(num, e.target.value); }}>
             {PERIOD_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
           </select>
         </div>
         <div className="pills quick" role="group" aria-label="เลือกระยะที่ใช้บ่อย">
-          {PERIOD_QUICK.map((q) => <button type="button" key={q} className={'chip' + (value === q ? ' on' : '')} onClick={() => onChange(k, q)}>{q}</button>)}
+          {PERIOD_QUICK.map((q) => <button type="button" key={q} className={'chip' + (value === q ? ' on' : '')} disabled={locked} onClick={() => onChange(k, q)}>{q}</button>)}
         </div>
         {legacy && <p className="mu" style={{ margin: '3px 0 0', fontSize: 12 }}>ค่าเดิม: {value} — กรอกตัวเลขและหน่วยเพื่อเปลี่ยน</p>}
       </>
@@ -110,7 +110,7 @@ export default function Field({ k, value, onChange, options, error, idp = 'f', f
       {input}
       {f.t === 'date' && minDate && <p className="mu" style={{ margin: '3px 0 0', fontSize: 12 }}>เลือกย้อนหลังได้ไม่เกิน 1 วัน (วันนี้และอนาคตเลือกได้)</p>}
       {(f.hintBy?.[formType] || f.hint) && <p className="mu" style={{ margin: '3px 0 0', fontSize: 12 }}>{f.hintBy?.[formType] || f.hint}</p>}
-      {locked && <p className="mu" style={{ margin: '3px 0 0', fontSize: 12 }}>🔒 ข้อมูลเดิมของ HN นี้ — แก้ไขได้ที่หน้าข้อมูลคนไข้เท่านั้น</p>}
+      {locked && <p className="mu" style={{ margin: '3px 0 0', fontSize: 12 }}>{lockNote || 'ข้อมูลเดิมของ HN นี้ — แก้ไขได้ที่หน้าข้อมูลคนไข้เท่านั้น'}</p>}
       {note && <p className="mu" style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--ac, #0a7)' }}>{note}</p>}
       {error && <p className="fe" role="alert">{error}</p>}
     </div>

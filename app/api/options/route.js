@@ -8,8 +8,9 @@ import { AppError } from '../../../lib/errors.js';
 // ?formType=case|day0 (เฉพาะผู้มีสิทธิ์กรอกฟอร์ม) จะได้รายชื่อทีมงานตามบทบาทมาด้วย: tDoc, tCell, tPh, tCk
 export const GET = route({}, async ({ req, user }) => {
   const ft = new URL(req.url).searchParams.get('formType');
-  if (ft && ['case', 'day0'].includes(ft) && canFill(user, ft)) return { options: await getFormOptions(ft) };
-  return { options: await getOptions() };
+  const limits = { imageMb: Number(process.env.MAX_IMAGE_MB || 25), videoMb: Number(process.env.MAX_VIDEO_MB || 1024) };
+  if (ft && ['case', 'day0'].includes(ft) && canFill(user, ft)) return { options: await getFormOptions(ft), limits };
+  return { options: await getOptions(), limits };
 });
 
 export const PUT = route({ perm: 'manage' }, async ({ req, user, body }) => {

@@ -1,33 +1,47 @@
 import { route, audit } from '../../../../lib/api.js';
-import { readToken } from '../../../../lib/auth.js';
 import { verifyUpload } from '../../../../lib/drive.js';
-import { addMediaMany, listMedia } from '../../../../lib/db.js';
-import { AppError } from '../../../../lib/errors.js';
+import { listMedia, listRecords, updateMediaMany, nowIso } from '../../../../lib/db.js';
 import { slotCap } from '../../../../lib/fields.js';
+import { mediaIdOf, withMediaLock } from '../../../../lib/media.js';
+import { AppError } from '../../../../lib/errors.js';
 
-// ขั้น 3: ยืนยันกับ Drive ว่าไฟล์มีอยู่จริงและขนาดตรงกัน แล้วบันทึกข้อมูลรูปทั้งชุดลงชีตในครั้งเดียว
 export const POST = route({ perm: 'upload' }, async ({ req, user, body }) => {
-  const tokens = Array.isArray(body?.tokens) ? body.tokens.slice(0, 60) : [];
-  const done = [], failed = [];
-  const existing = await listMedia();
-  const count = new Map();
-  const ckey = (r, g, k, s) => `${r}|${g}|${k}|${k === 'video' ? '' : s}`; // นับแยกตามช่อง: มุมถ่ายภาพ (1 รูป) · ภาพเพิ่มเติม (12) · วิดีโอ (10)
-  for (const m of existing) if (m.status === 'ready') { const k = ckey(m.recordId, m.group, m.kind, m.slot); count.set(k, (count.get(k) || 0) + 1); }
-  const parsed = tokens.map((t) => { try { const d = readToken(t); if (d.u !== user.id) throw new AppError(403, 'โทเคนไม่ตรงกับผู้ใช้'); return { t, d }; } catch (e) { failed.push({ token: t, error: e.message }); return null; } }).filter(Boolean);
-  await Promise.all(parsed.map(async ({ t, d }) => {
-    try { if (await verifyUpload(d.d, d.s)) done.push({ t, d }); else failed.push({ token: t, error: 'ไฟล์ยังอัปโหลดไม่ครบ' }); }
-    catch (e) { failed.push({ token: t, error: e.message }); }
-  }));
-  const rows = [], saved = [];
-  for (const { t, d } of done) {
-    if (existing.some((m) => m.id === d.id)) { saved.push(d.id); continue; } // ส่งยืนยันซ้ำ: บันทึกไว้แล้ว
-    const k = ckey(d.r, d.g, d.k, d.sl);
-    if ((count.get(k) || 0) >= slotCap(d.k, d.sl)) { failed.push({ token: t, error: 'ช่องนี้เต็มแล้ว ไฟล์ไม่ถูกบันทึก' }); continue; } // แจ้งให้เห็น ไม่ปล่อยให้หน้าจอขึ้นว่าสำเร็จทั้งที่ไม่ได้บันทึก
-    count.set(k, (count.get(k) || 0) + 1);
-    rows.push({ id: d.id, recordId: d.r, opd: d.o, group: d.g, kind: d.k, slot: d.k === 'video' ? '' : d.sl || '', driveId: d.d, name: d.n, mime: d.m, size: String(d.s), uploadedBy: user.id });
-    saved.push(d.id);
+  const failed = [], ids = [];
+  for (const value of Array.isArray(body?.mediaIds) ? body.mediaIds.slice(0, 60) : []) {
+    try { const id = mediaIdOf(value); if (!ids.includes(id)) ids.push(id); }
+    catch (e) { failed.push({ mediaId: String(value || ''), error: e.message }); }
   }
-  await addMediaMany(rows);
-  if (rows.length) audit(req, user, 'media_upload', rows[0].recordId, `${rows.length} ไฟล์`);
+  const saved = [], updates = [];
+  await withMediaLock(async () => {
+    const [existing, records] = await Promise.all([listMedia(), listRecords()]);
+    const byId = new Map(existing.map((m) => [m.id, m])), byRecord = new Map(records.map((r) => [r.id, r]));
+    const count = new Map(), key = (m) => `${m.recordId}|${m.group}|${m.kind}|${m.kind === 'video' ? '' : m.slot || ''}`;
+    for (const m of existing) if (m.status === 'ready') count.set(key(m), (count.get(key(m)) || 0) + 1);
+    const checked = await Promise.all(ids.map(async (id) => {
+      const prior = byId.get(id);
+      if (!prior) return { id, error: 'ไม่พบไฟล์ที่จองไว้' };
+      if (prior.uploadedBy !== user.id) return { id, error: 'ไม่พบไฟล์ที่ต้องการบันทึก' };
+      if (prior.status === 'ready') return { id, saved: true };
+      if (prior.status === 'cancelled') return { id, error: 'การจองไฟล์นี้ถูกยกเลิกแล้ว' };
+      if (prior.status !== 'uploading') return { id, error: 'สถานะไฟล์ไม่ถูกต้อง' };
+      const rec = byRecord.get(prior.recordId);
+      if (!rec) return { id, error: 'ไม่พบเคสของไฟล์นี้' };
+      try {
+        if (!await verifyUpload(prior.driveId, prior.size)) return { id, prior, rec, error: 'ไฟล์ยังอัปโหลดไม่ครบ' };
+        const k = key(prior), max = slotCap(prior.kind, prior.slot);
+        if ((count.get(k) || 0) >= max) return { id, error: 'ช่องนี้เต็มแล้ว ไฟล์ไม่ถูกบันทึก' };
+        count.set(k, (count.get(k) || 0) + 1);
+        return { id, prior, rec };
+      } catch (e) { return { id, error: e.message }; }
+    }));
+    for (const item of checked) {
+      if (item.error) failed.push({ mediaId: item.id, error: item.error });
+      else if (item.saved) saved.push(item.id);
+      else updates.push({ ...item.prior, opd: item.rec.opd, status: 'ready', uploadedAt: nowIso(), reservedAt: '' });
+    }
+    await updateMediaMany(updates);
+    saved.push(...updates.map((m) => m.id));
+  });
+  if (updates.length) audit(req, user, 'media_upload', updates[0].recordId, `${updates.length} ไฟล์`);
   return { saved, failed };
 });

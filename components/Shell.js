@@ -12,6 +12,7 @@ const NAV = [
     { href: '/new/case', l: '👤 คนไข้ติดตามผลตามระยะ Follow-Up(F/U)', ic: '👤', s: 'F/U', p: 'fillCase' },
     { href: '/new/day0', l: '🖼️ คนไข้เข้ารับบริการ(DAY 0)', ic: '🖼️', s: 'Day 0', p: 'fillDay0' },
     { href: '/search', l: '🔎 ค้นหาคนไข้', ic: '🔎', s: 'ค้นหา', p: 'viewImages' },
+    { href: '/followups', l: '≡ ฟอร์ม Follow-Up ในความดูแล', ic: '≡', s: 'F/U', p: 'viewFollowups' },
     { href: '/reports', l: '📊 รายงาน Dashboard', ic: '📊', s: 'รายงาน', p: 'viewStats' },
   ] },
   { h: 'ADMIN', items: [
