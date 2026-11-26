@@ -190,6 +190,7 @@ export default function CaseForm({ formType }) {
       setV((p) => ({ ...p, ...Object.fromEntries(BASIC_LOCK.map((k) => [k, k === 'gender' ? GENDERS[0] : k === 'plantDate' ? today() : ''])), round: ROUNDS[0] }));
     }
     if (!opd || !OPD_RE.test(opd)) return;
+    let cancelled = false;
     const t = setTimeout(async () => {
       try {
         const { data, meta: m, day0 } = await api('/api/records/autofill?opd=' + encodeURIComponent(opd));
@@ -204,9 +205,11 @@ export default function CaseForm({ formType }) {
           wasLocked.current = lk.size > 0; setLocked(lk);
           toast('เติมข้อมูลเดิมของ HN นี้ให้แล้ว' + (lk.size ? ' (ข้อมูลพื้นฐานล็อกไว้)' : ''));
         }
-      } catch {}
+      } catch (x) {
+        if (!cancelled) toast('โหลดข้อมูลเดิมไม่สำเร็จ: ' + (x?.message || 'กรุณาลองอีกครั้ง'));
+      }
     }, 450);
-    return () => clearTimeout(t);
+    return () => { cancelled = true; clearTimeout(t); };
   }, [v?.opd, formType, toast, opt, recordId]);
 
   if (!(formType === 'day0' ? perms.fillDay0 : perms.fillCase)) return <Denied />;
@@ -482,7 +485,7 @@ export default function CaseForm({ formType }) {
               {missingPicker(f, `เลือกไฟล์เดิม ${a.label} ${s.t}`)}
               {phase !== 'busy' && f.status !== 'saved' && <button type="button" className="btn d sm photo-remove" onClick={() => remove(f.id)} aria-label={`ลบรูป ${a.label} ${s.t}`}>ลบ</button>}
             </figure>
-          ) : phase === 'edit' ? (
+          ) : phase !== 'busy' ? (
             <label className="sl-add"><span aria-hidden="true">＋</span>เลือกรูป<input type="file" accept={ACCEPT_IMG} hidden aria-label={`เลือกรูป ${a.label} ${s.t}`} onChange={(e) => { const f1 = e.target.files?.[0]; if (f1) setSlotFile(g[0], id, f1); e.target.value = ''; }} /></label>
           ) : <div className="sl-empty">—</div>}
         </div>
@@ -495,7 +498,7 @@ export default function CaseForm({ formType }) {
       <details className="angle" key={a.id}>
         <summary><b>{a.no}. {a.label} <span className="mu" style={{ fontWeight: 400 }}>{n}/{a.slots.length} รูป</span></b></summary>
         <div className="angle-b">
-          {phase === 'edit' && <label className="btn multi">กดปุ่มนี้เพื่อเลือกหลายรูปพร้อมกัน<input type="file" accept={ACCEPT_IMG} multiple hidden onChange={(e) => { fillAngle(g[0], a, e.target.files); e.target.value = ''; }} /></label>}
+          {phase !== 'busy' && <label className="btn multi">กดปุ่มนี้เพื่อเลือกหลายรูปพร้อมกัน<input type="file" accept={ACCEPT_IMG} multiple hidden onChange={(e) => { fillAngle(g[0], a, e.target.files); e.target.value = ''; }} /></label>}
           <div className="slots">{a.slots.map((s) => slotTile(g, a, s))}</div>
         </div>
       </details>
@@ -508,7 +511,7 @@ export default function CaseForm({ formType }) {
       <details className="slot angle" key={kind}>
         <summary><b>{kind === 'image' ? 'ภาพเพิ่มเติม' : 'วิดีโอ'} <span className="mu" style={{ fontWeight: 400 }}>{items.length}/{max} {kind === 'image' ? 'ภาพ' : 'คลิป'}</span></b></summary>
         <div className="angle-b">
-          {phase === 'edit' && <label className="btn s">{kind === 'image' ? 'เลือกภาพเพิ่มเติม' : 'เลือกวิดีโอ'}<input type="file" accept={kind === 'image' ? ACCEPT_IMG : ACCEPT_VID} multiple hidden onChange={(e) => { addFiles(g[0], kind, e.target.files); e.target.value = ''; }} /></label>}
+          {phase !== 'busy' && <label className="btn s">{kind === 'image' ? 'เลือกภาพเพิ่มเติม' : 'เลือกวิดีโอ'}<input type="file" accept={kind === 'image' ? ACCEPT_IMG : ACCEPT_VID} multiple hidden onChange={(e) => { addFiles(g[0], kind, e.target.files); e.target.value = ''; }} /></label>}
           {items.length ? fileItems(items) : <div className="empty">{kind === 'image' ? 'ยังไม่มีภาพเพิ่มเติม' : 'ยังไม่มีวิดีโอ'}</div>}
         </div>
       </details>
