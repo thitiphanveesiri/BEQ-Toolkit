@@ -11,6 +11,17 @@ import { classify, ACCEPT_IMG, ACCEPT_VID } from '../lib/mediatypes.js';
 import { loadDraft, loadDraftFiles, saveDraft, saveDraftSnapshot, deleteDraft, newFileId, newRequestId } from '../lib/drafts.js';
 import { queryUpload, resumableUpload, SessionExpiredError } from '../lib/resumableUpload.js';
 
+const UPLOAD_IMAGE_WORKERS = 2;
+// กันหน้าจอดับ/เบราว์เซอร์หยุดเครือข่ายระหว่างอัปโหลด (Wake Lock หลุดเองเมื่อสลับแอป จึงขอใหม่เมื่อกลับมาที่หน้านี้)
+async function keepAwake() {
+  let lock = null, stopped = false;
+  const acquire = async () => { try { if (!stopped && navigator.wakeLock && document.visibilityState === 'visible') lock = await navigator.wakeLock.request('screen'); } catch { /* ไม่รองรับ/ถูกปฏิเสธ — ข้าม */ } };
+  const onVis = () => { if (document.visibilityState === 'visible') acquire(); };
+  document.addEventListener('visibilitychange', onVis);
+  await acquire();
+  return { release() { stopped = true; document.removeEventListener('visibilitychange', onVis); lock?.release?.().catch(() => {}); } };
+}
+
 const nameOf = (f) => f.file?.name || f.fileName || f.name || 'ไฟล์ที่เลือกไว้';
 const sizeOf = (f) => (f.file?.size ?? f.fileSize ?? Number(f.size)) || 0;
 const typeOf = (f) => f.file?.type || f.fileType || f.mime || '';
@@ -384,9 +395,12 @@ export default function CaseForm({ formType }) {
     };
     const worker = async (q) => { while (q.length) { const { f, seq } = q.shift(); const up = await uploadOne(f, rid, seq); if (up) ready.push(up); } };
     const fin = finalizer();
-    const workers = Array.from({ length: Math.min(4, images.length) }, () => worker(images));
+    // uplink ของมือถือมีจำกัด: ส่งหลายสตรีมพร้อมกันไม่ได้เร็วขึ้น แต่ทำให้แต่ละไฟล์ช้าลงจนหลุด/ค้าง จึงใช้ 2 รูป + 1 วิดีโอ
+    const workers = Array.from({ length: Math.min(UPLOAD_IMAGE_WORKERS, images.length) }, () => worker(images));
     if (videos.length) workers.push(worker(videos));
-    await Promise.all(workers); workersDone = true; await fin;
+    const wake = await keepAwake();
+    try { await Promise.all(workers); } finally { wake.release(); }
+    workersDone = true; await fin;
     return filesRef.current.every((f) => f.status === 'saved');
   }
 
