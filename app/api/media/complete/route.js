@@ -1,6 +1,6 @@
 import { route, audit } from '../../../../lib/api.js';
 import { verifyUpload } from '../../../../lib/drive.js';
-import { listMedia, listRecords, updateMediaMany, nowIso } from '../../../../lib/db.js';
+import { listMedia, listRecords, updateMediaMany, nowIso, refreshDb } from '../../../../lib/db.js';
 import { slotCap } from '../../../../lib/fields.js';
 import { mediaIdOf, withMediaLock } from '../../../../lib/media.js';
 import { AppError } from '../../../../lib/errors.js';
@@ -13,7 +13,12 @@ export const POST = route({ perm: 'upload' }, async ({ req, user, body }) => {
   }
   const saved = [], updates = [];
   await withMediaLock(async () => {
-    const [existing, records] = await Promise.all([listMedia(), listRecords()]);
+    let [existing, records] = await Promise.all([listMedia(), listRecords()]);
+    // แถวจอง (/init) อาจถูกเขียนโดย server instance อื่นที่ cache ของเรายังไม่เห็น: ถ้ามี ID ที่หาไม่เจอ ให้อ่านจาก Sheets ใหม่ 1 ครั้งก่อนตัดสินว่า "ไม่พบ"
+    if (ids.some((id) => !existing.some((m) => m.id === id))) {
+      await refreshDb();
+      [existing, records] = await Promise.all([listMedia(), listRecords()]);
+    }
     const byId = new Map(existing.map((m) => [m.id, m])), byRecord = new Map(records.map((r) => [r.id, r]));
     const count = new Map(), key = (m) => `${m.recordId}|${m.group}|${m.kind}|${m.kind === 'video' ? '' : m.slot || ''}`;
     for (const m of existing) if (m.status === 'ready') count.set(key(m), (count.get(key(m)) || 0) + 1);
