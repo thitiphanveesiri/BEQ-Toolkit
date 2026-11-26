@@ -10,7 +10,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --test tests/critical.test.js tests/slow-upload.test.js tests/stale-cache.test.js",
+    "test": "node --test tests/critical.test.js tests/slow-upload.test.js tests/stale-cache.test.js tests/slot-reuse.test.js",
     "get-token": "node --env-file-if-exists=.env.local scripts/get-token.mjs",
     "setup": "node --env-file-if-exists=.env.local scripts/setup.mjs",
     "migrate-opd": "node --env-file-if-exists=.env.local scripts/migrate-opd.mjs"

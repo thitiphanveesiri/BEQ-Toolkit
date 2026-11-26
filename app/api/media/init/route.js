@@ -3,7 +3,7 @@ import { listRecords, listMedia, addMedia, updateMedia, nowIso } from '../../../
 import { startUpload, safeName, verifyUpload, removeUpload } from '../../../../lib/drive.js';
 import { groupsFor, groupLabel, isImageSlot, slotCap, slotFile, EXTRA_SLOT, VIDEO_SLOT } from '../../../../lib/fields.js';
 import { classify, extOf } from '../../../../lib/mediatypes.js';
-import { activeReservation, mediaIdOf, mediaTarget, occupiedMediaCount, sameTarget, withMediaLock } from '../../../../lib/media.js';
+import { activeReservation, mediaIdOf, mediaTarget, occupiedMediaCount, planSingleSlot, sameTarget, slotOccupants, withMediaLock } from '../../../../lib/media.js';
 import { AppError } from '../../../../lib/errors.js';
 
 const mb = (n) => n * 1024 * 1024;
@@ -24,10 +24,31 @@ export const POST = route({ perm: 'upload' }, async ({ req, user, body }) => wit
   if (kind === 'image' && !isImageSlot(slot)) throw new AppError(400, 'ไม่พบช่องมุมถ่ายภาพนี้ — กรุณารีเฟรชหน้าเว็บ แล้วลองอีกครั้ง');
   const max = slotCap(kind, slot), target = mediaTarget(rec, group, kind, slot, mime, size);
   const mediaId = mediaIdOf(body.mediaId);
-  const allMedia = await listMedia(), prior = allMedia.find((m) => m.id === mediaId);
+  let allMedia = await listMedia();
+  const prior = allMedia.find((m) => m.id === mediaId);
   if (prior && prior.uploadedBy !== user.id) throw new AppError(403, 'ไม่พบไฟล์ที่ต้องการอัปโหลดต่อ');
   if (prior && !sameTarget(prior, target)) throw new AppError(409, 'รหัสไฟล์นี้ถูกใช้กับไฟล์หรือช่องอื่นแล้ว');
   if (prior?.status === 'ready') return { mediaId, alreadySaved: true, fileName: prior.name };
+  // ช่องมุมถ่าย (รับ 1 รูป) ที่มีไฟล์อื่นครอบครองอยู่: หลังรีเฟรช/ล้างร่าง ไฟล์เดิมจะได้รหัสใหม่ ถ้าปฏิเสธทุกกรณีผู้ใช้จะติดอยู่กับรูปของตัวเอง (การจองค้างนานได้ถึง 24 ชม.)
+  if (kind === 'image' && max === 1 && !activeReservation(prior)) {
+    const occupants = slotOccupants(allMedia, { ...target, id: mediaId });
+    if (occupants.length) {
+      const plan = planSingleSlot(occupants, { userId: user.id, size, mime });
+      if (plan.action === 'reuse') return { mediaId, alreadySaved: true, fileName: plan.media.name };
+      if (plan.action === 'reject') throw new AppError(409, plan.busy
+        ? 'ช่องมุมนี้กำลังมีการอัปโหลดรูปอื่นอยู่ — รอสักครู่แล้วลองใหม่'
+        : `ช่องมุมนี้มีรูปบันทึกไว้แล้ว (${plan.media.name}) — ถ้าต้องการรูปเพิ่มให้ใส่ในช่อง “ภาพเพิ่มเติม” หรือให้ผู้ดูแลลบรูปเดิมออกก่อน`);
+      // ไฟล์ที่จองไว้แต่ส่งขึ้น Drive ครบแล้ว (บันทึกไม่ทัน) และเป็นไฟล์เดียวกัน -> บันทึกให้เลย ไม่ต้องส่งใหม่
+      for (const old of plan.same) {
+        if (await verifyUpload(old.driveId, old.size)) {
+          const saved = await updateMedia({ ...old, opd: rec.opd, status: 'ready', uploadedAt: nowIso(), reservedAt: '' });
+          return { mediaId, alreadySaved: true, fileName: saved.name };
+        }
+      }
+      for (const old of plan.stale) { await removeUpload(old.driveId); await updateMedia({ ...old, status: 'cancelled', reservedAt: '' }); }
+      allMedia = await listMedia();
+    }
+  }
   const have = occupiedMediaCount(allMedia, { ...target, id: mediaId });
   if (!activeReservation(prior) && have >= max) throw new AppError(400, kind === 'video' ? `ช่องวิดีโอนี้เต็มแล้ว (สูงสุด ${max} คลิป)` : slot === EXTRA_SLOT ? `ช่องภาพเพิ่มเติมเต็มแล้ว (สูงสุด ${max} ภาพ)` : 'ช่องมุมนี้มีรูปอยู่แล้ว — ถ้าต้องการรูปเพิ่มให้ใส่ในช่อง “ภาพเพิ่มเติม”');
   if (prior && prior.status !== 'cancelled' && await verifyUpload(prior.driveId, prior.size)) {
