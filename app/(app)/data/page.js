@@ -4,10 +4,17 @@ import { useMe, useToast, Denied } from '../../../components/Ctx.js';
 import { api, clearApiCache } from '../../../lib/client.js';
 
 // อ่านไฟล์ CSV: UTF-8 (มี/ไม่มี BOM) ก่อน ถ้าไม่ใช่ลองถอดรหัสแบบ Windows-874 (Excel ภาษาไทยที่เซฟ “CSV (Comma delimited)” จะได้รหัสนี้)
-async function readText(file) {
+// .xlsx: ส่งไฟล์ทั้งก้อนเป็น base64 ให้ server อ่าน (วันที่ในเซลล์ Excel จะอ่านเป็นวันที่จริง ไม่ต้องเดา วัน/เดือน)
+async function readFile(file) {
   const buf = await file.arrayBuffer();
-  try { return { text: new TextDecoder('utf-8', { fatal: true }).decode(buf), legacy: false }; }
-  catch { return { text: new TextDecoder('windows-874').decode(buf), legacy: true }; }
+  if (/\.xlsx$/i.test(file.name)) {
+    const b = new Uint8Array(buf); let s = '';
+    for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000));
+    return { data: { xlsx: btoa(s) }, legacy: false };
+  }
+  if (/\.xls$/i.test(file.name)) throw new Error('ไฟล์ .xls แบบเก่ายังไม่รองรับ — เปิดใน Excel แล้วเซฟเป็น .xlsx');
+  try { return { data: { csv: new TextDecoder('utf-8', { fatal: true }).decode(buf) }, legacy: false }; }
+  catch { return { data: { csv: new TextDecoder('windows-874').decode(buf) }, legacy: true }; }
 }
 
 // เพดานเดียวกับ /api/import (Vercel รับ body ราว 4.5 MB)
@@ -16,6 +23,7 @@ const KINDS = [['day0', 'Day 0 (วันที่มาปลูก)'], ['case'
 
 const GUIDE = [
   ['เวลาที่ส่ง', 'ไม่บังคับ — เช่น 2026-11-27 14:30 หรือ 27/11/2026 14:30 (เวลาไทย, รับปี พ.ศ.) ถ้าเว้นว่างใช้เวลาที่นำเข้า'],
+  ['ไฟล์ Excel (.xlsx)', 'อ่านชีตแรก แถวแรกเป็นหัวตาราง · เซลล์ที่จัดรูปแบบเป็นวันที่ (รวมแบบ พ.ศ.) อ่านเป็นวันที่จริงอัตโนมัติ · ใหญ่สุด 3 MB'],
   ['รูปแบบวันที่', 'แนะนำ 2026-11-27 · ถ้าใช้ / ระบบดูทั้งไฟล์ว่าเป็น วัน/เดือน/ปี หรือ เดือน/วัน/ปี (ใช้แบบเดียวกันทั้งไฟล์)'],
   ['เลข OPD', 'บังคับ — HN-12345-6-789012 หรือเลข 12 หลัก (คอลัมน์ต้องเป็นรูปแบบ “ข้อความ” ไม่งั้น Excel จะแปลงเลข)'],
   ['ชื่อคนไข้', 'บังคับ — ชื่อ [ชื่อกลาง] นามสกุล คั่นด้วยเว้นวรรค'],
@@ -78,29 +86,29 @@ function Export({ toast }) {
 
 function Import({ toast }) {
   const input = useRef(null);
-  const [kind, setKind] = useState(''), [file, setFile] = useState(null), [text, setText] = useState(''), [res, setRes] = useState(null), [busy, setBusy] = useState(false), [err, setErr] = useState(''), [done, setDone] = useState(null), [legacy, setLegacy] = useState(false);
+  const [kind, setKind] = useState(''), [file, setFile] = useState(null), [data, setData] = useState(null), [res, setRes] = useState(null), [busy, setBusy] = useState(false), [err, setErr] = useState(''), [done, setDone] = useState(null), [legacy, setLegacy] = useState(false);
 
-  function reset() { setFile(null); setText(''); setRes(null); setErr(''); setLegacy(false); if (input.current) input.current.value = ''; }
+  function reset() { setFile(null); setData(null); setRes(null); setErr(''); setLegacy(false); if (input.current) input.current.value = ''; }
   const formType = kind === 'auto' ? '' : kind;
-  const send = (csv, commit, ft = formType) => {
-    if (new Blob([csv]).size > MAX_BYTES) throw new Error('ไฟล์ใหญ่เกิน 4 MB — กรุณาแบ่งเป็นหลายไฟล์');
-    return api('/api/import', { method: 'POST', body: { csv, commit, formType: ft } });
+  const send = (d, commit, ft = formType) => {
+    if (new Blob([d.csv ?? d.xlsx]).size > MAX_BYTES) throw new Error(d.xlsx ? 'ไฟล์ Excel ใหญ่เกิน 3 MB — กรุณาแบ่งเป็นหลายไฟล์' : 'ไฟล์ใหญ่เกิน 4 MB — กรุณาแบ่งเป็นหลายไฟล์');
+    return api('/api/import', { method: 'POST', body: { ...d, commit, formType: ft } });
   };
-  async function preview(csv, ft) {
+  async function preview(d, ft) {
     setBusy(true); setErr(''); setRes(null);
-    try { setRes(await send(csv, false, ft)); } catch (x) { setErr(x.message); }
+    try { setRes(await send(d, false, ft)); } catch (x) { setErr(x.message); }
     setBusy(false);
   }
   async function pick(e) {
     const f = e.target.files?.[0]; if (!f) return;
     reset(); setDone(null); setFile(f);
-    try { const r = await readText(f); setText(r.text); setLegacy(r.legacy); await preview(r.text, formType); } catch (x) { setErr(x.message); }
+    try { const r = await readFile(f); setData(r.data); setLegacy(r.legacy); await preview(r.data, formType); } catch (x) { setErr(x.message); }
   }
-  function changeKind(k) { setKind(k); if (text) preview(text, k === 'auto' ? '' : k); } // เปลี่ยนชนิดหลังเลือกไฟล์แล้ว: ตรวจใหม่
+  function changeKind(k) { setKind(k); if (data) preview(data, k === 'auto' ? '' : k); } // เปลี่ยนชนิดหลังเลือกไฟล์แล้ว: ตรวจใหม่
   async function commit() {
     setBusy(true); setErr('');
     try {
-      const r = await send(text, true);
+      const r = await send(data, true);
       clearApiCache(); setDone(r); reset(); toast(`นำเข้า ${r.created} แถวแล้ว`);
     } catch (x) { setErr(x.message); }
     setBusy(false);
@@ -109,7 +117,7 @@ function Import({ toast }) {
 
   return (
     <div className="card">
-      <h2>นำเข้าข้อมูลจาก CSV</h2>
+      <h2>นำเข้าข้อมูลจาก Excel / CSV</h2>
       <ol className="mu" style={{ margin: '0 0 12px', paddingLeft: 20 }}>
         <li>เลือกชนิดไฟล์ <b>Day 0</b> หรือ <b>F/U</b> แล้วดาวน์โหลดเทมเพลตของชนิดนั้น กรอกข้อมูล (หรือใช้ไฟล์ที่ส่งออกจากระบบ/ชีตเดิมที่หัวตารางตรงกัน)</li>
         <li>เลือกไฟล์ — ระบบจะ <b>ตรวจสอบให้ดูก่อน ยังไม่บันทึกอะไร</b></li>
@@ -124,7 +132,7 @@ function Import({ toast }) {
       </div>
       <div className="row" style={{ gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
         <a className="btn s" href={kind ? `/api/import/template${formType ? '?formType=' + formType : ''}` : undefined} aria-disabled={!kind} download>⬇ เทมเพลต CSV{formType ? (formType === 'case' ? ' (F/U)' : ' (Day 0)') : ''}</a>
-        <input ref={input} type="file" accept=".csv,text/csv,text/plain" onChange={pick} disabled={busy || !kind} aria-label="เลือกไฟล์ CSV" />
+        <input ref={input} type="file" accept=".xlsx,.csv,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={pick} disabled={busy || !kind} aria-label="เลือกไฟล์ Excel หรือ CSV" />
       </div>
       {!kind && <p className="mu">เลือกชนิดไฟล์ก่อน จึงจะเลือกไฟล์ได้</p>}
       {busy && <p className="mu">กำลังประมวลผล...</p>}

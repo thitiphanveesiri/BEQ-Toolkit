@@ -199,3 +199,20 @@ test('เทมเพลต Day 0 ไม่มีช่องเฉพาะ F/U
   assert.ok(!templateHeaders('day0').includes('วันที่เข้ามารับบริการ (F/U)'));
   assert.deepEqual(templateHeaders('case'), HEADERS);
 });
+
+test('นำเข้า .xlsx: เซลล์วันที่ของ Excel (รวมรูปแบบ พ.ศ.) อ่านเป็นวันที่จริง และผ่าน parseImport', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { readXlsx, buildXlsx } = await import('../lib/xlsx.js');
+  // ไฟล์ตัวอย่างสร้างด้วย openpyxl: sharedStrings + deflate + รูปแบบวันที่แบบ built-in/custom/ไทย
+  const rows = readXlsx(readFileSync(new URL('./fixtures/import-sample.xlsx', import.meta.url)));
+  assert.deepEqual(rows[1], ['2026-11-27 14:30:00', '123456789012', 'สมชาย ใจดี', '2026-03-04', '2026-04-05', '35', 'F/U']);
+  assert.equal(rows.length, 3); // แถวว่างท้ายไฟล์ถูกตัด
+  const r = parseImport(rows, { options, users, importer, formType: 'case' });
+  assert.equal(r.dateNote, ''); // วันที่จาก Excel ไม่ต้องเดา วัน/เดือน
+  assert.deepEqual(r.results.map((x) => [x.status, x.rec?.plantDate, x.rec?.date]), [['ok', '2026-03-04', '2026-04-05'], ['ok', '2026-11-20', '2026-11-27']]);
+  assert.equal(r.results[0].rec.createdAt, '2026-11-27T07:30:00.000Z');
+  // ส่งออก .xlsx ของระบบเอง → อ่านกลับได้เท่าเดิม
+  const back = readXlsx(buildXlsx({ headers: ['a', 'b'], rows: [['=1+1', 'ก & <ข>'], [5, '']] }));
+  assert.deepEqual(back, [['a', 'b'], ['=1+1', 'ก & <ข>'], ['5']]);
+  assert.throws(() => readXlsx(Buffer.from('not a zip')), /อ่านไฟล์ Excel ไม่ได้/);
+});
