@@ -14,6 +14,7 @@ const NAV = [
     { href: '/search', l: '🔎 ค้นหาคนไข้', ic: '🔎', s: 'ค้นหา', p: 'viewImages' },
     { href: '/followups', l: '≡ ฟอร์ม Follow-Up ในความดูแล', ic: '≡', s: 'F/U', p: 'viewFollowups' },
     { href: '/reports', l: '📊 รายงาน Dashboard', ic: '📊', s: 'รายงาน', p: 'viewStats' },
+    { href: '/data', l: '🗂️ นำเข้า/ส่งออกข้อมูล', ic: '🗂️', s: 'ข้อมูล', p: 'exportData' },
   ] },
   { h: 'ADMIN', items: [
     { href: '/users', l: '👥 จัดการผู้ใช้', ic: '👥', s: 'ผู้ใช้', p: 'manage' },
