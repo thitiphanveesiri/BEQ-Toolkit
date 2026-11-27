@@ -313,3 +313,4 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var
 @media(max-width:420px){.slots{grid-template-columns:1fr}.lightbox{padding-left:8px;padding-right:8px}.lb-nav{width:44px;height:56px}.lb-nav.l{left:2px}.lb-nav.r{right:2px}.lightbox-caption,.lb-hint{max-width:98vw}}
 @media(prefers-reduced-motion:reduce){.acc-h .ch,.angle>summary::after,.slot>summary::after,.sl>summary::after,.pv-open,.bar i{transition:none}.spin{animation:none}}
 
+.btn[aria-disabled="true"] { opacity: .5; pointer-events: none; }
