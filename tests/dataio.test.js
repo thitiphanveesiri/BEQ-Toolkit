@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseCsv, toCsv } from '../lib/csv.js';
 import { buildXlsx } from '../lib/xlsx.js';
-import { COLUMNS, HEADERS, exportTable, parseDate, parseImport, parseTimestamp } from '../lib/dataio.js';
+import { COLUMNS, HEADERS, exportTable, parseDate, parseImport, parseTimestamp, templateHeaders } from '../lib/dataio.js';
 import { DEFAULT_OPTIONS } from '../lib/fields.js';
 
 const options = { ...DEFAULT_OPTIONS };
@@ -168,4 +168,34 @@ test('นำเข้า: ใส่รายการผิดคอลัมน
 test('นำเข้า: ไฟล์เก่าที่รวม Stem cell กับงานฉีดไว้ช่องเดียวยังนำเข้าได้', () => {
   const r = parseImport(parseCsv('เลข OPD,ชื่อคนไข้,วันที่ปลูก,ปลูกด้วย stem cell งานฉีดและอื่นๆ\r\n111111111111,ก ข,2026-11-20,"iStemz, PRP"'), { options, users, importer }).results[0];
   assert.equal(r.status, 'ok', r.message); assert.deepEqual([r.rec.tool, r.rec.inj, r.rec.procType], ['iStemz', 'PRP', 'Cell Therapy, Rejuvenation']);
+});
+
+test('วันที่ เดือน/วัน/ปี: ดูทั้งไฟล์ · ปนกันปฏิเสธ · ค่ากำกวมเตือน', () => {
+  assert.equal(parseDate('3/4/2026', true), '2026-03-04');
+  assert.equal(parseTimestamp('11/27/2026 14:30', true), '2026-11-27T07:30:00.000Z');
+  const go = (...dates) => parseImport(parseCsv(['เลข OPD,ชื่อคนไข้,วันที่ปลูก', ...dates.map((d, i) => `${111111111111 + i},ก ข${i},${d}`)].join('\r\n')), { options, users, importer });
+  const us = go('11/27/2026', '3/4/2026');
+  assert.match(us.dateNote, /เดือน\/วัน\/ปี/);
+  assert.deepEqual(us.results.map((r) => r.rec.date), ['2026-11-27', '2026-03-04']);
+  const th = go('27/11/2026', '3/4/2026');
+  assert.equal(th.dateNote, '');
+  assert.equal(th.results[1].rec.date, '2026-04-03');
+  assert.match(go('3/4/2026').dateNote, /อ่านเป็น วัน\/เดือน\/ปี/);
+  assert.throws(() => go('27/11/2026', '11/27/2026'), /ปนกัน/);
+});
+
+test('เลือกชนิดไฟล์ Day 0 / F/U: บังคับทั้งไฟล์ และจับไฟล์ผิดชนิด', () => {
+  const head = 'เลข OPD,ชื่อคนไข้,วันที่ปลูก,วันที่เข้ามารับบริการ (F/U),ที่มา';
+  const go = (formType, ...lines) => parseImport(parseCsv([head, ...lines].join('\r\n')), { options, users, importer, formType }).results;
+  const fu = go('case', '111111111111,ก ข,2026-01-01,2026-02-01,')[0];
+  assert.equal(fu.status, 'ok'); assert.equal(fu.rec.formType, 'case'); assert.equal(fu.rec.date, '2026-02-01');
+  assert.equal(go('day0', '111111111111,ก ข,2026-01-01,,')[0].rec.formType, 'day0');
+  assert.match(go('day0', '111111111111,ก ข,2026-01-01,2026-02-01,ฟอร์ม F/U')[0].message, /ไม่ตรงกับชนิดไฟล์/);
+  assert.match(go('case', '111111111111,ก ข,2026-01-01,2026-02-01,ฟอร์ม Day 0')[0].message, /ไม่ตรงกับชนิดไฟล์/);
+  assert.throws(() => parseImport(parseCsv('เลข OPD,ชื่อคนไข้,วันที่ปลูก\r\n111111111111,ก ข,2026-01-01'), { options, users, importer, formType: 'case' }), /ไฟล์ F\/U ต้องมีคอลัมน์/);
+});
+
+test('เทมเพลต Day 0 ไม่มีช่องเฉพาะ F/U', () => {
+  assert.ok(!templateHeaders('day0').includes('วันที่เข้ามารับบริการ (F/U)'));
+  assert.deepEqual(templateHeaders('case'), HEADERS);
 });

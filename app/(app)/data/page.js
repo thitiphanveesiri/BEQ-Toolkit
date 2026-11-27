@@ -10,8 +10,13 @@ async function readText(file) {
   catch { return { text: new TextDecoder('windows-874').decode(buf), legacy: true }; }
 }
 
+// เพดานเดียวกับ /api/import (Vercel รับ body ราว 4.5 MB)
+const MAX_BYTES = 4_000_000;
+const KINDS = [['day0', 'Day 0 (วันที่มาปลูก)'], ['case', 'F/U (ติดตามผล)'], ['auto', 'ปนกัน — ดูจากคอลัมน์ “ที่มา” ทีละแถว']];
+
 const GUIDE = [
   ['เวลาที่ส่ง', 'ไม่บังคับ — เช่น 2026-11-27 14:30 หรือ 27/11/2026 14:30 (เวลาไทย, รับปี พ.ศ.) ถ้าเว้นว่างใช้เวลาที่นำเข้า'],
+  ['รูปแบบวันที่', 'แนะนำ 2026-11-27 · ถ้าใช้ / ระบบดูทั้งไฟล์ว่าเป็น วัน/เดือน/ปี หรือ เดือน/วัน/ปี (ใช้แบบเดียวกันทั้งไฟล์)'],
   ['เลข OPD', 'บังคับ — HN-12345-6-789012 หรือเลข 12 หลัก (คอลัมน์ต้องเป็นรูปแบบ “ข้อความ” ไม่งั้น Excel จะแปลงเลข)'],
   ['ชื่อคนไข้', 'บังคับ — ชื่อ [ชื่อกลาง] นามสกุล คั่นด้วยเว้นวรรค'],
   ['ปลูกผมย้ายราก', 'วิธีปลูก เช่น FUE, FUT, DHI (ต้องอยู่ในรายการตัวเลือกของระบบ) — ใส่ ✓ ได้ถ้าไม่ทราบวิธี'],
@@ -22,7 +27,7 @@ const GUIDE = [
   ['ประเภทเคส · เซลล์ · แพทย์ · ผู้ถ่าย · ตรวจสอบโดย', 'ไม่บังคับ — ชื่อทีมงานพิมพ์ตามจริงได้ (ประเภทเคสต้องอยู่ในรายการ)'],
   ['ผู้ส่ง', 'ชื่อบัญชีผู้ใช้ ถ้าไม่ตรงกับผู้ใช้ในระบบ จะบันทึกเป็นผู้นำเข้า และเก็บชื่อเดิมไว้ในหมายเหตุ'],
   ['จำนวนไฟล์ · สถานะ · โฟลเดอร์ภาพ', 'ส่งออกอย่างเดียว — ตอนนำเข้าไม่สนใจ (นำเข้าข้อมูลเคสเท่านั้น ไม่ได้นำเข้ารูป/วิดีโอ)'],
-  ['ที่มา', 'ระบุ “F/U” = ฟอร์มติดตามผล (ต้องกรอก “วันที่เข้ามารับบริการ (F/U)” ด้วย) นอกนั้นนับเป็น Day 0'],
+  ['ที่มา', 'ไม่ต้องกรอกถ้าเลือกชนิดไฟล์ Day 0 หรือ F/U · ถ้าเลือก “ปนกัน”: ระบุ “F/U” = ติดตามผล (ต้องกรอก “วันที่เข้ามารับบริการ (F/U)”) นอกนั้นนับเป็น Day 0'],
   ['ข้อมูลเพิ่มเติม (ท้ายตาราง)', 'เพศ อายุ สัญชาติ ครั้งที่ ฯลฯ ไม่บังคับ — ลบคอลัมน์ทิ้งได้'],
 ];
 
@@ -73,22 +78,29 @@ function Export({ toast }) {
 
 function Import({ toast }) {
   const input = useRef(null);
-  const [file, setFile] = useState(null), [text, setText] = useState(''), [res, setRes] = useState(null), [busy, setBusy] = useState(false), [err, setErr] = useState(''), [done, setDone] = useState(null), [legacy, setLegacy] = useState(false);
+  const [kind, setKind] = useState(''), [file, setFile] = useState(null), [text, setText] = useState(''), [res, setRes] = useState(null), [busy, setBusy] = useState(false), [err, setErr] = useState(''), [done, setDone] = useState(null), [legacy, setLegacy] = useState(false);
 
   function reset() { setFile(null); setText(''); setRes(null); setErr(''); setLegacy(false); if (input.current) input.current.value = ''; }
-  async function pick(e) {
-    const f = e.target.files?.[0]; if (!f) return;
-    reset(); setDone(null); setFile(f); setBusy(true);
-    try {
-      const r = await readText(f); setText(r.text); setLegacy(r.legacy);
-      setRes(await api('/api/import', { method: 'POST', body: { csv: r.text, commit: false } }));
-    } catch (x) { setErr(x.message); }
+  const formType = kind === 'auto' ? '' : kind;
+  const send = (csv, commit, ft = formType) => {
+    if (new Blob([csv]).size > MAX_BYTES) throw new Error('ไฟล์ใหญ่เกิน 4 MB — กรุณาแบ่งเป็นหลายไฟล์');
+    return api('/api/import', { method: 'POST', body: { csv, commit, formType: ft } });
+  };
+  async function preview(csv, ft) {
+    setBusy(true); setErr(''); setRes(null);
+    try { setRes(await send(csv, false, ft)); } catch (x) { setErr(x.message); }
     setBusy(false);
   }
+  async function pick(e) {
+    const f = e.target.files?.[0]; if (!f) return;
+    reset(); setDone(null); setFile(f);
+    try { const r = await readText(f); setText(r.text); setLegacy(r.legacy); await preview(r.text, formType); } catch (x) { setErr(x.message); }
+  }
+  function changeKind(k) { setKind(k); if (text) preview(text, k === 'auto' ? '' : k); } // เปลี่ยนชนิดหลังเลือกไฟล์แล้ว: ตรวจใหม่
   async function commit() {
     setBusy(true); setErr('');
     try {
-      const r = await api('/api/import', { method: 'POST', body: { csv: text, commit: true } });
+      const r = await send(text, true);
       clearApiCache(); setDone(r); reset(); toast(`นำเข้า ${r.created} แถวแล้ว`);
     } catch (x) { setErr(x.message); }
     setBusy(false);
@@ -99,14 +111,22 @@ function Import({ toast }) {
     <div className="card">
       <h2>นำเข้าข้อมูลจาก CSV</h2>
       <ol className="mu" style={{ margin: '0 0 12px', paddingLeft: 20 }}>
-        <li>ดาวน์โหลดเทมเพลต แล้วกรอกข้อมูล (หรือใช้ไฟล์ที่ส่งออกจากระบบ/ชีตเดิมที่หัวตารางตรงกัน)</li>
+        <li>เลือกชนิดไฟล์ <b>Day 0</b> หรือ <b>F/U</b> แล้วดาวน์โหลดเทมเพลตของชนิดนั้น กรอกข้อมูล (หรือใช้ไฟล์ที่ส่งออกจากระบบ/ชีตเดิมที่หัวตารางตรงกัน)</li>
         <li>เลือกไฟล์ — ระบบจะ <b>ตรวจสอบให้ดูก่อน ยังไม่บันทึกอะไร</b></li>
         <li>กด “ยืนยันนำเข้า” — เฉพาะแถวที่ผ่าน (แถวซ้ำ/ผิดพลาดจะถูกข้าม)</li>
       </ol>
-      <div className="row" style={{ gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-        <a className="btn s" href="/api/import/template" download>⬇ เทมเพลต CSV</a>
-        <input ref={input} type="file" accept=".csv,text/csv,text/plain" onChange={pick} disabled={busy} aria-label="เลือกไฟล์ CSV" />
+      <div style={{ maxWidth: 360, marginBottom: 10 }}>
+        <label htmlFor="ik">ชนิดไฟล์</label>
+        <select id="ik" value={kind} onChange={(e) => changeKind(e.target.value)} disabled={busy}>
+          <option value="" disabled>— เลือกชนิดไฟล์ —</option>
+          {KINDS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </select>
       </div>
+      <div className="row" style={{ gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+        <a className="btn s" href={kind ? `/api/import/template${formType ? '?formType=' + formType : ''}` : undefined} aria-disabled={!kind} download>⬇ เทมเพลต CSV{formType ? (formType === 'case' ? ' (F/U)' : ' (Day 0)') : ''}</a>
+        <input ref={input} type="file" accept=".csv,text/csv,text/plain" onChange={pick} disabled={busy || !kind} aria-label="เลือกไฟล์ CSV" />
+      </div>
+      {!kind && <p className="mu">เลือกชนิดไฟล์ก่อน จึงจะเลือกไฟล์ได้</p>}
       {busy && <p className="mu">กำลังประมวลผล...</p>}
       {err && <div className="banner" role="alert" style={{ marginTop: 12, color: 'var(--dn)' }}>{err}</div>}
       {legacy && res && <div className="banner" style={{ marginTop: 12 }}>ไฟล์นี้ไม่ใช่ UTF-8 — ระบบถอดรหัสเป็นภาษาไทย (Windows-874) ให้ ตรวจดูชื่อในผลตรวจสอบว่าอ่านออกถูกต้อง หรือเซฟใหม่เป็น “CSV UTF-8”</div>}
@@ -114,6 +134,7 @@ function Import({ toast }) {
       {res && (
         <div style={{ marginTop: 14 }}>
           <div>{stat(res.total, 'ทั้งหมด', '')}{stat(res.create, 'นำเข้าได้', 'o')}{stat(res.duplicate, 'ซ้ำ (ข้าม)', 'w')}{stat(res.error, 'ผิดพลาด', 'x')}</div>
+          {res.dateNote && <div className="banner" style={{ margin: '8px 0' }}>{res.dateNote}</div>}
           {!!res.ignored.length && <p className="mu">คอลัมน์ที่ไม่รู้จัก (ไม่ถูกนำเข้า): {res.ignored.join(', ')}</p>}
           {!!res.unknownPeople.length && <p className="mu">ชื่อทีมงานที่ไม่ตรงกับผู้ใช้ในระบบ (บันทึกตามที่พิมพ์): {res.unknownPeople.join(', ')}</p>}
           {!!res.issues.length && (
@@ -126,7 +147,7 @@ function Import({ toast }) {
           )}
           {res.error + res.duplicate > res.issues.length && <p className="mu">แสดง {res.issues.length} รายการแรกจาก {res.error + res.duplicate} รายการ</p>}
           <div className="row" style={{ gap: 10, marginTop: 12 }}>
-            <button className="btn" onClick={commit} disabled={busy || !res.create}>ยืนยันนำเข้า {res.create} แถว</button>
+            <button className="btn" onClick={commit} disabled={busy || !res.create}>ยืนยันนำเข้า {res.create} แถว{formType ? (formType === 'case' ? ' (F/U)' : ' (Day 0)') : ''}</button>
             <button className="btn s" onClick={reset} disabled={busy}>ยกเลิก</button>
           </div>
         </div>
